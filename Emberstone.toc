@@ -1,0 +1,23 @@
+## Interface: 120100, 120105, 16001
+## Title: Emberstone
+## Author: Bobcation
+## Version: 1.11
+## Notes: Automatic milestone screenshots + guild-wide level-up notifications (Retail + WoW Forever) | Automatische Screenshots bei eigenen Meilensteinen + gildenweite Levelup-Benachrichtigungen
+## OptionalDeps: RemGrind, Ding, GrindDing
+## SavedVariables: EmberstoneCommon
+## SavedVariablesPerCharacter: EmberstoneCharacter
+## IconTexture: Interface\AddOns\Emberstone\Assets\thumbnail.tga
+
+src/Locale.lua
+src/Config.lua
+src/Util.lua
+src/Commands.lua
+src/Core.lua
+src/features/Screenshots.lua
+src/features/Delves.lua
+src/features/PvP.lua
+src/features/GuildDing.lua
+src/features/RareKill.lua
+src/features/AfkText.lua
+src/Events.lua
+src/UI.lua
