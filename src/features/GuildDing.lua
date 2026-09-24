@@ -7,11 +7,42 @@
 -- Emberstone integriert, damit die Gilde nur noch ein Addon installieren muss.
 local ADDON_NAME, Addon = ...
 
+-- Zerlegt "Name-Realm" in Name und Realm. Als Realm gilt NUR der Teil nach
+-- dem LETZTEN Bindestrich, und nur, wenn er keine Leerzeichen enthaelt
+-- (Realm-Namen im Roster sind ohne Leerzeichen). So bleiben Forever-Namen
+-- wie "Anne-Marie Schmidt" heil; nur "Anne-Marie Schmidt-Realm" verliert
+-- den Realm. Grenzfall: ein Name ohne Leerzeichen und ohne Realm, aber mit
+-- Bindestrich ("Anne-Marie") ist davon nicht zu unterscheiden - Namen aus
+-- dem Roster tragen den Realm aber immer mit.
+function Addon:SplitRealm(name)
+    if not name then return nil end
+    local base, realm = name:match("^(.+)%-([^%-]+)$")
+    if base and not realm:find("%s") then
+        return base, realm
+    end
+    return name, nil
+end
+
 -- Normalisiert Rosternamen: schneidet einen "-Realm"-Anhang ab, damit
 -- derselbe Spieler nicht unter zwei verschiedenen Schluesseln landet.
 function Addon:NormalizeName(name)
+    return (self:SplitRealm(name))
+end
+
+-- Anzeigename wie in Blizzards Gildenchat: Realm nur, wenn noetig
+-- (Ambiguate). Wie Ambiguate mit Bindestrichen IM Namen umgeht, ist nicht
+-- dokumentiert - deshalb wird sein Ergebnis nur uebernommen, wenn es der
+-- volle Name oder der Name ohne Realm nach unserer eigenen Regel ist.
+-- Sonst bleibt es beim vollen Namen (nie ein verstuemmelter Name).
+function Addon:DisplayName(name)
     if not name then return nil end
-    return name:match("^([^%-]+)") or name
+    if Ambiguate then
+        local ok, short = pcall(Ambiguate, name, "guild")
+        if ok and type(short) == "string" and (short == name or short == self:NormalizeName(name)) then
+            return short
+        end
+    end
+    return name
 end
 
 -- ============================================================
@@ -29,12 +60,24 @@ function Addon:GetIgnoreList()
     return EmberstoneCommon.guildDingIgnoreList
 end
 
+-- Passt ein gespeicherter bzw. eingetippter Name zu einem (Roster-)Namen?
+-- Treffer, wenn er dem vollen Namen oder dem Namen ohne Realm entspricht.
+-- Der gespeicherte Name selbst wird bewusst NICHT normalisiert: ein von
+-- Hand eingetippter Doppelname ohne Realm ("Anna Schmidt-Weber") sieht
+-- sonst aus wie "Anna Schmidt" mit Realm "Weber".
+function Addon:NameMatches(stored, fullName)
+    if type(stored) ~= "string" or type(fullName) ~= "string" then return false end
+    stored = self:Trim(stored):lower()
+    fullName = self:Trim(fullName)
+    if stored == "" then return false end
+    return stored == fullName:lower() or stored == self:NormalizeName(fullName):lower()
+end
+
 function Addon:FindIgnoreIndex(name)
-    local target = self:NormalizeName(name)
-    if not target then return nil end
-    target = target:lower()
+    if not name then return nil end
     for i, entry in ipairs(self:GetIgnoreList()) do
-        if self:NormalizeName(entry) and self:NormalizeName(entry):lower() == target then
+        -- Trim (in NameMatches) auch fuer aeltere Eintraege mit Leerzeichen am Ende
+        if self:NameMatches(entry, name) or self:NameMatches(name, entry) then
             return i
         end
     end
@@ -46,9 +89,13 @@ function Addon:IsIgnored(name)
 end
 
 function Addon:AddIgnore(name)
-    if not name or name == "" then return false end
-    if self:IsIgnored(name) then return false end
-    table.insert(self:GetIgnoreList(), self:NormalizeName(name))
+    name = self:Trim(name)
+    if name == "" then return false end
+    -- Schon abgedeckt? ("Max" deckt "Max-Realm" ab, aber nicht umgekehrt)
+    for _, entry in ipairs(self:GetIgnoreList()) do
+        if self:NameMatches(entry, name) then return false end
+    end
+    table.insert(self:GetIgnoreList(), name)
     return true
 end
 
@@ -94,6 +141,7 @@ function Addon:HandleLogCommand(rest)
     rest = rest or ""
     local sub, arg = rest:match("^(%S*)%s*(.-)$")
     sub = (sub or ""):lower()
+    arg = self:Trim(arg)
     local log = self:GetDingLog()
 
     if sub == "level" then
@@ -117,14 +165,23 @@ function Addon:HandleLogCommand(rest)
             print(Addon.L["LOG_PLAYER_USAGE"])
             return
         end
-        local target = self:NormalizeName(arg)
-        target = target and target:lower()
-        local found = false
-        for _, entry in ipairs(log) do
-            if target and entry.name:lower() == target then
-                found = true
-                PrintLogEntry(entry)
+        -- entry.name ist schon ohne Realm. Genau passende Eintraege gehen
+        -- vor; nur wenn es keine gibt, wird ein Realm-Anhang der Eingabe
+        -- abgeschnitten ("Anna Schmidt-Weber" soll nicht "Anna Schmidt" finden).
+        local function Collect(target)
+            local hits = {}
+            for _, entry in ipairs(log) do
+                if type(entry.name) == "string" and entry.name:lower() == target:lower() then
+                    table.insert(hits, entry)
+                end
             end
+            return hits
+        end
+        local hits = Collect(arg)
+        if #hits == 0 then hits = Collect(self:NormalizeName(arg)) end
+        local found = #hits > 0
+        for _, entry in ipairs(hits) do
+            PrintLogEntry(entry)
         end
         if not found then
             print(string.format(Addon.L["LOG_PLAYER_EMPTY"], arg))
@@ -152,6 +209,7 @@ function Addon:HandleIgnoreCommand(rest)
     rest = rest or ""
     local sub, name = rest:match("^(%S*)%s*(.-)$")
     sub = (sub or ""):lower()
+    name = self:Trim(name)
 
     if sub == "add" then
         if name == "" then
@@ -159,9 +217,9 @@ function Addon:HandleIgnoreCommand(rest)
             return
         end
         if self:AddIgnore(name) then
-            print(string.format(Addon.L["IGNORE_ADD_DONE"], self:NormalizeName(name)))
+            print(string.format(Addon.L["IGNORE_ADD_DONE"], name))
         else
-            print(string.format(Addon.L["IGNORE_ADD_EXISTS"], self:NormalizeName(name)))
+            print(string.format(Addon.L["IGNORE_ADD_EXISTS"], name))
         end
     elseif sub == "remove" then
         if name == "" then
@@ -169,9 +227,9 @@ function Addon:HandleIgnoreCommand(rest)
             return
         end
         if self:RemoveIgnore(name) then
-            print(string.format(Addon.L["IGNORE_REMOVE_DONE"], self:NormalizeName(name)))
+            print(string.format(Addon.L["IGNORE_REMOVE_DONE"], name))
         else
-            print(string.format(Addon.L["IGNORE_REMOVE_NOT_FOUND"], self:NormalizeName(name)))
+            print(string.format(Addon.L["IGNORE_REMOVE_NOT_FOUND"], name))
         end
     elseif sub == "list" then
         local list = self:GetIgnoreList()
@@ -199,9 +257,17 @@ function Addon:RequestGuildRosterUpdate()
     end
 end
 
+-- Bildschirmmeldung: zuerst die aktuelle API (RaidWarningUtil.AddMessage).
+-- RaidNotice_AddMessage gibt es seit 12.x nur noch als "Deprecated"-Huelle,
+-- die nur mit der CVar loadDeprecationFallbacks geladen wird und mit der
+-- naechsten Erweiterung wegfallen soll - deshalb nur noch als Rueckfall.
 local function SafeRaidNotice(text, r, g, b)
+    local color = { r = r, g = g, b = b }
+    if RaidWarningUtil and RaidWarningUtil.AddMessage then
+        if pcall(RaidWarningUtil.AddMessage, text, color) then return end
+    end
     if RaidNotice_AddMessage and RaidWarningFrame then
-        pcall(RaidNotice_AddMessage, RaidWarningFrame, text, { r = r, g = g, b = b })
+        pcall(RaidNotice_AddMessage, RaidWarningFrame, text, color)
     end
 end
 
@@ -214,7 +280,7 @@ end
 -- Meldung (RaidWarningFrame) unterstuetzt grundsaetzlich keine Hyperlinks
 -- und bleibt bewusst reiner Text.
 local function PlayerLink(name)
-    return string.format("|cFFFFD100|Hplayer:%s|h[%s]|h|r", name, name)
+    return string.format("|cFFFFD100|Hplayer:%s|h[%s]|h|r", name, Addon:DisplayName(name))
 end
 
 -- ============================================================
@@ -860,7 +926,7 @@ local function MemberKey(name, guid)
     if type(guid) == "string" and guid ~= "" and not (issecretvalue and issecretvalue(guid)) then
         return guid
     end
-    if name and not name:find("-", 1, true) and GetNormalizedRealmName then
+    if name and not select(2, Addon:SplitRealm(name)) and GetNormalizedRealmName then
         local realm = GetNormalizedRealmName()
         if realm and realm ~= "" then return name .. "-" .. realm end
     end
@@ -915,7 +981,7 @@ function Addon:CheckGuildDings()
                         print(string.format(Addon.L["GUILD_DING_CHAT"], PlayerLink(name), level))
                     end
                     if self:GetSetting("guildDingScreen") then
-                        SafeRaidNotice(string.format(Addon.L["GUILD_DING_SCREEN"], name, level), 1, 0.82, 0.0)
+                        SafeRaidNotice(string.format(Addon.L["GUILD_DING_SCREEN"], self:DisplayName(name), level), 1, 0.82, 0.0)
                     end
                     self:SendAutoGZ(name, level, key, level - known)
                     self:AddDingLogEntry(name, level)

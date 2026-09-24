@@ -99,7 +99,12 @@ function Addon:OnInitialize()
     end
 
     -- 8) Minimap-Symbol (ausblendbar unter Optionen -> Sonstiges)
+    -- Ein Fehler hier soll den Start nicht abbrechen, aber auch nicht still
+    -- verschwinden - er geht an den normalen Fehler-Handler (BugSack & Co.).
     if self.UpdateMinimapButton then
-        pcall(self.UpdateMinimapButton, self)
+        local ok, err = pcall(self.UpdateMinimapButton, self)
+        if not ok and geterrorhandler then
+            geterrorhandler()(err)
+        end
     end
 end

@@ -22,7 +22,7 @@ local STRINGS = {
     -- Commands.lua
     OPTIONS_UNAVAILABLE = {
         enUS = "Emberstone: The options window could not be opened. You can still test the guild notification with /emberstone test.",
-        deDE = "Emberstone: Das Optionsfenster konnte nicht geoeffnet werden. Mit /emberstone test kannst du trotzdem die Gilden-Benachrichtigung ausprobieren.",
+        deDE = "Emberstone: Das Optionsfenster konnte nicht geöffnet werden. Mit /emberstone test kannst du trotzdem die Gilden-Benachrichtigung ausprobieren.",
     },
 
     -- Screenshots.lua
@@ -32,7 +32,7 @@ local STRINGS = {
     -- der falschen Reihenfolge im Text bzw. string.format wirft einen Fehler.
     SCREENSHOT_TOTAL = {
         enUS = "%s: Emberstone has taken %d screenshots so far (%d total on this account).",
-        deDE = "Emberstone hat fuer %s bisher %d Screenshots gesammelt (%d insgesamt auf diesem Account).",
+        deDE = "Emberstone hat für %s bisher %d Screenshots gesammelt (%d insgesamt auf diesem Account).",
     },
     SCREENSHOT_SAVED = {
         enUS = "Emberstone saved a screenshot.",
@@ -42,7 +42,7 @@ local STRINGS = {
     -- GuildDing.lua
     GUILD_DING_CHAT = {
         enUS = "%s reached level |cFFFFD100%d|r! Congratulations!",
-        deDE = "%s hat Level |cFFFFD100%d|r erreicht! Herzlichen Glueckwunsch!",
+        deDE = "%s hat Level |cFFFFD100%d|r erreicht! Herzlichen Glückwunsch!",
     },
     GUILD_DING_SCREEN = {
         enUS = "%s reached level %d!",
@@ -61,7 +61,7 @@ local STRINGS = {
     -- UI.lua - Sektionen auf der Hauptseite
     OPT_SECTION_PREVENT_DUPES  = { enUS = "Not Too Many At Once", deDE = "Nicht zu viele auf einmal" },
     OPT_SECTION_LESS_LAG       = { enUS = "Less Stutter", deDE = "Weniger Ruckler" },
-    OPT_SECTION_GUILD          = { enUS = "For the Whole Guild", deDE = "Fuer die ganze Gilde" },
+    OPT_SECTION_GUILD          = { enUS = "For the Whole Guild", deDE = "Für die ganze Gilde" },
     OPT_SECTION_MISC           = { enUS = "Miscellaneous", deDE = "Sonstiges" },
 
     -- UI.lua - Themen-Unterseiten (seit v1.9, siehe CreateSubcategory).
@@ -85,87 +85,87 @@ local STRINGS = {
     },
     GROUP_PHOTO_REMINDER = {
         enUS = "Boss defeated! Time for a group photo? (/screenshot)",
-        deDE = "Boss besiegt! Zeit fuer ein Gruppenfoto? (/screenshot)",
+        deDE = "Boss besiegt! Zeit für ein Gruppenfoto? (/screenshot)",
     },
 
     OPT_FOREVER_UNCERTAIN = {
         enUS = " (likely not yet available in WoW Forever)",
-        deDE = " (in WoW Forever aktuell vermutlich noch nicht verfuegbar)",
+        deDE = " (in WoW Forever aktuell vermutlich noch nicht verfügbar)",
     },
 
     -- UI.lua - eigene Meilensteine (Screenshot-Ereignisse)
     OPT_EVENT_ACHIEVEMENT_LABEL = { enUS = "Achievement earned", deDE = "Achievement geschafft" },
     OPT_EVENT_ACHIEVEMENT_TOOLTIP = {
         enUS = "Automatically takes a screenshot when you earn an achievement.",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn du ein Achievement erhaeltst.",
+        deDE = "Hält automatisch einen Screenshot fest, wenn du ein Achievement erhältst.",
     },
     OPT_EVENT_BOSS_LABEL = { enUS = "Boss defeated", deDE = "Boss besiegt" },
     OPT_EVENT_BOSS_TOOLTIP = {
         enUS = "Automatically takes a screenshot when you defeat a boss.",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn du einen Boss besiegst.",
+        deDE = "Hält automatisch einen Screenshot fest, wenn du einen Boss besiegst.",
     },
     OPT_EVENT_DELVE_LABEL = { enUS = "Delve completed", deDE = "Delve abgeschlossen" },
     OPT_EVENT_DELVE_TOOLTIP = {
         enUS = "Automatically takes a screenshot when you complete a delve.",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn du ein Delve abschliesst.",
+        deDE = "Hält automatisch einen Screenshot fest, wenn du ein Delve abschließt.",
     },
     OPT_EVENT_LEVEL_LABEL = { enUS = "Leveled up", deDE = "Level aufgestiegen" },
     OPT_EVENT_LEVEL_TOOLTIP = {
         enUS = "Automatically takes a screenshot when you reach a new level.",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn du ein neues Level erreichst.",
+        deDE = "Hält automatisch einen Screenshot fest, wenn du ein neues Level erreichst.",
     },
     OPT_EVENT_CHALLENGE_LABEL = { enUS = "Mythic+ completed", deDE = "Mythic+ abgeschlossen" },
     OPT_EVENT_CHALLENGE_TOOLTIP = {
         enUS = "Automatically takes a screenshot when you complete a Mythic+.",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn du ein Mythic+ abschliesst.",
+        deDE = "Hält automatisch einen Screenshot fest, wenn du ein Mythic+ abschließt.",
     },
     OPT_EVENT_CHALLENGE_RECORD_LABEL = { enUS = "New Mythic+ record", deDE = "Neuer Mythic+ Rekord" },
     OPT_EVENT_CHALLENGE_RECORD_TOOLTIP = {
         enUS = "Automatically takes a screenshot when you set a new Mythic+ record.",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn du einen neuen Mythic+ Rekord aufstellst.",
+        deDE = "Hält automatisch einen Screenshot fest, wenn du einen neuen Mythic+ Rekord aufstellst.",
     },
-    OPT_EVENT_RARE_KILL_LABEL = { enUS = "Rare mob killed", deDE = "Rar-Mob getoetet" },
+    OPT_EVENT_RARE_KILL_LABEL = { enUS = "Rare mob killed", deDE = "Rar-Mob getötet" },
     OPT_EVENT_RARE_KILL_TOOLTIP = {
         enUS = "Automatically takes a screenshot when your current target, classified as a rare or rare elite, dies. Detected via your target's health, not the combat log.",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn dein anvisiertes Ziel (als Rar oder Rar-Elite eingestuft) stirbt. Wird ueber die Lebenspunkte deines Ziels erkannt, nicht ueber das Kampf-Logbuch.",
+        deDE = "Hält automatisch einen Screenshot fest, wenn dein anvisiertes Ziel (als Rar oder Rar-Elite eingestuft) stirbt. Wird über die Lebenspunkte deines Ziels erkannt, nicht über das Kampf-Logbuch.",
     },
-    OPT_EVENT_WORLDBOSS_KILL_LABEL = { enUS = "World boss killed", deDE = "Weltboss getoetet" },
+    OPT_EVENT_WORLDBOSS_KILL_LABEL = { enUS = "World boss killed", deDE = "Weltboss getötet" },
     OPT_EVENT_WORLDBOSS_KILL_TOOLTIP = {
         enUS = "Automatically takes a screenshot when your current target, classified as a world boss, dies. Detected via your target's health, not the combat log.",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn dein anvisiertes Ziel (als Weltboss eingestuft) stirbt. Wird ueber die Lebenspunkte deines Ziels erkannt, nicht ueber das Kampf-Logbuch.",
+        deDE = "Hält automatisch einen Screenshot fest, wenn dein anvisiertes Ziel (als Weltboss eingestuft) stirbt. Wird über die Lebenspunkte deines Ziels erkannt, nicht über das Kampf-Logbuch.",
     },
 
     OPT_EVENT_DELAY_SUFFIX = { enUS = " \226\128\147 delay", deDE = " \226\128\147 Wartezeit" },
     OPT_EVENT_DELAY_TOOLTIP = {
         enUS = "How many seconds Emberstone waits before triggering the screenshot.",
-        deDE = "Wie viele Sekunden Emberstone wartet, bevor der Screenshot ausgeloest wird.",
+        deDE = "Wie viele Sekunden Emberstone wartet, bevor der Screenshot ausgelöst wird.",
     },
 
     OPT_ARENA_WIN_LABEL = { enUS = "Arena won", deDE = "Arena gewonnen" },
     OPT_ARENA_WIN_TOOLTIP = {
         enUS = "Automatically takes a screenshot when you win an arena match.%s (Blizzard has not announced an arena format for Forever yet.)",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn du einen Arenakampf gewinnst.%s (Blizzard hat fuer Forever bisher kein Arena-Format angekuendigt).",
+        deDE = "Hält automatisch einen Screenshot fest, wenn du einen Arenakampf gewinnst.%s (Blizzard hat für Forever bisher kein Arena-Format angekündigt).",
     },
-    OPT_ONLY_RATED_ARENA_LABEL = { enUS = "Rated matches only", deDE = "Nur gewertete Kaempfe" },
+    OPT_ONLY_RATED_ARENA_LABEL = { enUS = "Rated matches only", deDE = "Nur gewertete Kämpfe" },
     OPT_ONLY_RATED_ARENA_TOOLTIP = {
         enUS = "Only triggers on rated arena matches, not normal ones.%s",
-        deDE = "Loest nur bei gewerteten Arenakaempfen aus, nicht bei normalen.%s",
+        deDE = "Löst nur bei gewerteten Arenakämpfen aus, nicht bei normalen.%s",
     },
     OPT_BG_WIN_LABEL = { enUS = "Battleground won", deDE = "Schlachtfeld gewonnen" },
     OPT_BG_WIN_TOOLTIP = {
         enUS = "Automatically takes a screenshot when you win a battleground.",
-        deDE = "Haelt automatisch einen Screenshot fest, wenn du ein Schlachtfeld gewinnst.",
+        deDE = "Hält automatisch einen Screenshot fest, wenn du ein Schlachtfeld gewinnst.",
     },
     OPT_ONLY_RATED_BG_LABEL = { enUS = "Rated battlegrounds only", deDE = "Nur gewertete Schlachtfelder" },
     OPT_ONLY_RATED_BG_TOOLTIP = {
         enUS = "Only triggers on rated battlegrounds, not normal ones.%s (Blizzard has not announced rated PvP for Forever yet.)",
-        deDE = "Loest nur bei gewerteten Schlachtfeldern aus, nicht bei normalen.%s (Blizzard hat fuer Forever bisher kein gewertetes PvP angekuendigt).",
+        deDE = "Löst nur bei gewerteten Schlachtfeldern aus, nicht bei normalen.%s (Blizzard hat für Forever bisher kein gewertetes PvP angekündigt).",
     },
 
     OPT_PREVENT_DUPES_LABEL = { enUS = "Prevent duplicate screenshots", deDE = "Doppelte Screenshots vermeiden" },
     OPT_PREVENT_DUPES_TOOLTIP = {
         enUS = "Prevents multiple screenshots for the same event, e.g. when a boss kill also triggers an achievement.",
-        deDE = "Verhindert mehrere Screenshots fuer dasselbe Ereignis, z.B. wenn ein Bosskill gleichzeitig ein Achievement ausloest.",
+        deDE = "Verhindert mehrere Screenshots für dasselbe Ereignis, z.B. wenn ein Bosskill gleichzeitig ein Achievement auslöst.",
     },
     OPT_DUPLICATE_THRESHOLD_LABEL = { enUS = "Minimum spacing", deDE = "Mindestabstand" },
     OPT_DUPLICATE_THRESHOLD_TOOLTIP = {
@@ -176,12 +176,12 @@ local STRINGS = {
     OPT_REDUCE_QUALITY_LABEL = { enUS = "Reduce stutter", deDE = "Ruckler reduzieren" },
     OPT_REDUCE_QUALITY_TOOLTIP = {
         enUS = "Briefly lowers image quality right before an automatic screenshot and restores it afterwards. Your manual screenshots (Print Screen key) are unaffected.",
-        deDE = "Senkt kurz vor einem automatischen Screenshot die Bildqualitaet ab und stellt sie danach wieder her. Deine manuellen Screenshots (Druck-Taste) bleiben davon unberuehrt.",
+        deDE = "Senkt kurz vor einem automatischen Screenshot die Bildqualität ab und stellt sie danach wieder her. Deine manuellen Screenshots (Druck-Taste) bleiben davon unberührt.",
     },
-    OPT_SCREENSHOT_QUALITY_LABEL = { enUS = "Image quality", deDE = "Bildqualitaet" },
+    OPT_SCREENSHOT_QUALITY_LABEL = { enUS = "Image quality", deDE = "Bildqualität" },
     OPT_SCREENSHOT_QUALITY_TOOLTIP = {
         enUS = "0 = small file, barely noticeable stutter. 10 = best quality, longer stutter.",
-        deDE = "0 = kleine Datei, kaum spuerbarer Ruckler. 10 = beste Qualitaet, laengerer Ruckler.",
+        deDE = "0 = kleine Datei, kaum spürbarer Ruckler. 10 = beste Qualität, längerer Ruckler.",
     },
 
     OPT_GUILD_ENABLED_LABEL = { enUS = "Report guild level-ups", deDE = "Levelaufstiege der Gilde melden" },
@@ -192,17 +192,17 @@ local STRINGS = {
     OPT_GUILD_SCREEN_LABEL = { enUS = "On-screen message", deDE = "Bildschirm-Meldung" },
     OPT_GUILD_SCREEN_TOOLTIP = {
         enUS = "Shows a large on-screen message when someone in your guild levels up.",
-        deDE = "Zeigt eine grosse Meldung auf dem Bildschirm, wenn jemand aus deiner Gilde aufsteigt.",
+        deDE = "Zeigt eine große Meldung auf dem Bildschirm, wenn jemand aus deiner Gilde aufsteigt.",
     },
     OPT_GUILD_CHAT_LABEL = { enUS = "Chat message", deDE = "Chat-Meldung" },
     OPT_GUILD_CHAT_TOOLTIP = {
         enUS = "Writes a chat message when someone in your guild levels up.",
         deDE = "Schreibt eine Nachricht in den Chat, wenn jemand aus deiner Gilde aufsteigt.",
     },
-    OPT_GUILD_POLL_INTERVAL_LABEL = { enUS = "Poll frequency", deDE = "Abfrage-Haeufigkeit" },
+    OPT_GUILD_POLL_INTERVAL_LABEL = { enUS = "Poll frequency", deDE = "Abfrage-Häufigkeit" },
     OPT_GUILD_POLL_INTERVAL_TOOLTIP = {
         enUS = "How often (in seconds) Emberstone checks in the background whether someone leveled up. Larger intervals mean fewer background requests, but slightly later notifications.",
-        deDE = "Wie oft (in Sekunden) Emberstone im Hintergrund nachschaut, ob jemand aufgestiegen ist. Groessere Abstaende bedeuten weniger Hintergrundanfragen, aber etwas spaetere Meldungen.",
+        deDE = "Wie oft (in Sekunden) Emberstone im Hintergrund nachschaut, ob jemand aufgestiegen ist. Größere Abstände bedeuten weniger Hintergrundanfragen, aber etwas spätere Meldungen.",
     },
 
     -- GuildDing.lua - automatische Gratulation (sendet echte Chat-Nachrichten,
@@ -211,24 +211,24 @@ local STRINGS = {
     OPT_GUILD_AUTOGZ_GUILD_LABEL = { enUS = "Auto-congratulate in guild chat", deDE = "Automatisch im Gildenchat gratulieren" },
     OPT_GUILD_AUTOGZ_GUILD_TOOLTIP = {
         enUS = "Automatically writes a congratulation message in guild chat when someone in your guild levels up. Off by default - can get noisy if several members level up around the same time.",
-        deDE = "Schreibt automatisch eine Glueckwunsch-Nachricht in den Gildenchat, wenn jemand aus deiner Gilde aufsteigt. Standardmaessig aus - kann unruhig werden, wenn mehrere Mitglieder gleichzeitig leveln.",
+        deDE = "Schreibt automatisch eine Glückwunsch-Nachricht in den Gildenchat, wenn jemand aus deiner Gilde aufsteigt. Standardmäßig aus - kann unruhig werden, wenn mehrere Mitglieder gleichzeitig leveln.",
     },
-    OPT_GUILD_AUTOGZ_WHISPER_LABEL = { enUS = "Auto-congratulate via whisper", deDE = "Automatisch per Fluestern gratulieren" },
+    OPT_GUILD_AUTOGZ_WHISPER_LABEL = { enUS = "Auto-congratulate via whisper", deDE = "Automatisch per Flüstern gratulieren" },
     OPT_GUILD_AUTOGZ_WHISPER_TOOLTIP = {
         enUS = "Automatically whispers the member directly when they level up. Off by default - some members may not want an automatic whisper.",
-        deDE = "Fluestert dem Mitglied automatisch direkt, wenn es aufsteigt. Standardmaessig aus - manche Mitglieder moechten vielleicht keine automatische Fluesternachricht.",
+        deDE = "Flüstert dem Mitglied automatisch direkt, wenn es aufsteigt. Standardmäßig aus - manche Mitglieder möchten vielleicht keine automatische Flüsternachricht.",
     },
     GUILD_DING_GZ_GUILD = {
         enUS = "Congratulations %s on level %d!",
-        deDE = "Glueckwunsch %s zum Level %d!",
+        deDE = "Glückwunsch %s zum Level %d!",
     },
     GUILD_DING_GZ_WHISPER = {
         enUS = "Congratulations on level %d!",
-        deDE = "Glueckwunsch zum Level %d!",
+        deDE = "Glückwunsch zum Level %d!",
     },
     GUILD_DING_GZ_SEND_FAILED = {
         enUS = "Emberstone: Auto-congratulation could not be sent (channel unavailable?).",
-        deDE = "Emberstone: Automatische Gratulation konnte nicht gesendet werden (Kanal nicht verfuegbar?).",
+        deDE = "Emberstone: Automatische Gratulation konnte nicht gesendet werden (Kanal nicht verfügbar?).",
     },
 
     -- GuildDing.lua - eigener, einstellbarer Nachrichtentext (/emberstone gzmsg ...)
@@ -237,30 +237,30 @@ local STRINGS = {
     -- der Unterkategorie "Fuer die ganze Gilde" (UI.lua), gebaut mit ganz
     -- normalen CreateFrame-Buttons statt der offenbar kaputten Settings-
     -- Listen-API. Der Slash-Befehl bleibt trotzdem als Alternative bestehen.
-    OPT_GUILD_AUTOGZ_GUILD_RANDOM_LABEL = { enUS = "Use random guild-chat variant", deDE = "Zufaellige Gildenchat-Variante nutzen" },
+    OPT_GUILD_AUTOGZ_GUILD_RANDOM_LABEL = { enUS = "Use random guild-chat variant", deDE = "Zufällige Gildenchat-Variante nutzen" },
     OPT_GUILD_AUTOGZ_GUILD_RANDOM_TOOLTIP = {
         enUS = "Picks randomly from your guild-chat text variants (/emberstone gzmsg guild pool ...) instead of always using the single fixed text.",
-        deDE = "Waehlt zufaellig aus deinen Gildenchat-Textvarianten (/emberstone gzmsg guild pool ...), statt immer den einen festen Text zu nutzen.",
+        deDE = "Wählt zufällig aus deinen Gildenchat-Textvarianten (/emberstone gzmsg guild pool ...), statt immer den einen festen Text zu nutzen.",
     },
-    OPT_GUILD_AUTOGZ_WHISPER_RANDOM_LABEL = { enUS = "Use random whisper variant", deDE = "Zufaellige Fluester-Variante nutzen" },
+    OPT_GUILD_AUTOGZ_WHISPER_RANDOM_LABEL = { enUS = "Use random whisper variant", deDE = "Zufällige Flüster-Variante nutzen" },
     OPT_GUILD_AUTOGZ_WHISPER_RANDOM_TOOLTIP = {
         enUS = "Picks randomly from your whisper text variants (/emberstone gzmsg whisper pool ...) instead of always using the single fixed text.",
-        deDE = "Waehlt zufaellig aus deinen Fluester-Textvarianten (/emberstone gzmsg whisper pool ...), statt immer den einen festen Text zu nutzen.",
+        deDE = "Wählt zufällig aus deinen Flüster-Textvarianten (/emberstone gzmsg whisper pool ...), statt immer den einen festen Text zu nutzen.",
     },
     GZMSG_HELP = {
         enUS = "Usage: /emberstone gzmsg guild <text> | /emberstone gzmsg whisper <text> | /emberstone gzmsg guild|whisper pool add|remove|list | /emberstone gzmsg guild|whisper random on|off | /emberstone gzmsg reset (without text, opens an edit window instead).",
-        deDE = "Verwendung: /emberstone gzmsg guild <Text> | /emberstone gzmsg whisper <Text> | /emberstone gzmsg guild|whisper pool add|remove|list | /emberstone gzmsg guild|whisper random on|off | /emberstone gzmsg reset (ohne Text oeffnet sich stattdessen ein Eingabefenster).",
+        deDE = "Verwendung: /emberstone gzmsg guild <Text> | /emberstone gzmsg whisper <Text> | /emberstone gzmsg guild|whisper pool add|remove|list | /emberstone gzmsg guild|whisper random on|off | /emberstone gzmsg reset (ohne Text öffnet sich stattdessen ein Eingabefenster).",
     },
     GZMSG_CURRENT_GUILD = { enUS = "Current guild-chat text: %s", deDE = "Aktueller Gildenchat-Text: %s" },
-    GZMSG_CURRENT_WHISPER = { enUS = "Current whisper text: %s", deDE = "Aktueller Fluester-Text: %s" },
+    GZMSG_CURRENT_WHISPER = { enUS = "Current whisper text: %s", deDE = "Aktueller Flüster-Text: %s" },
     GZMSG_INVALID = {
         enUS = "Invalid text - it must contain exactly these placeholders, in this order: %s",
-        deDE = "Ungueltiger Text - er muss genau diese Platzhalter in dieser Reihenfolge enthalten: %s",
+        deDE = "Ungültiger Text - er muss genau diese Platzhalter in dieser Reihenfolge enthalten: %s",
     },
     GZMSG_PLACEHOLDERS_GUILD = { enUS = "%s (name), %d (level)", deDE = "%s (Name), %d (Level)" },
     GZMSG_PLACEHOLDERS_WHISPER = { enUS = "%d (level)", deDE = "%d (Level)" },
     GZMSG_SAVED = { enUS = "Saved.", deDE = "Gespeichert." },
-    GZMSG_RESET_DONE = { enUS = "Both message texts were reset to default.", deDE = "Beide Nachrichtentexte wurden auf Standard zurueckgesetzt." },
+    GZMSG_RESET_DONE = { enUS = "Both message texts were reset to default.", deDE = "Beide Nachrichtentexte wurden auf Standard zurückgesetzt." },
     -- WICHTIG: Dieser Text landet als StaticPopupDialogs["..."].text direkt in
     -- Blizzards eigenem Dialog-Frame. Auf diesem Client ruft GameDialog.lua
     -- dafuer IMMER SetFormattedText(text, text_arg1, text_arg2) auf, auch wenn
@@ -272,27 +272,27 @@ local STRINGS = {
     -- sie als reinen Text ausgibt statt als Platzhalter zu behandeln.
     GZMSG_EDIT_GUILD_TITLE = {
         enUS = "Guild-chat congratulation text (must contain %%s for the name and %%d for the level, in that order):",
-        deDE = "Gildenchat-Glueckwunschtext (muss %%s fuer den Namen und %%d fuer das Level enthalten, in dieser Reihenfolge):",
+        deDE = "Gildenchat-Glückwunschtext (muss %%s für den Namen und %%d für das Level enthalten, in dieser Reihenfolge):",
     },
     GZMSG_EDIT_WHISPER_TITLE = {
         enUS = "Whisper congratulation text (must contain %%d for the level):",
-        deDE = "Fluester-Glueckwunschtext (muss %%d fuer das Level enthalten):",
+        deDE = "Flüster-Glückwunschtext (muss %%d für das Level enthalten):",
     },
 
     -- UI.lua / GuildDing.lua - echte Buttons (seit v1.8 direkt in der
     -- "Fuer die ganze Gilde"-Unterkategorie), Ersatz fuer die kaputten
     -- v1.4-Buttons.
     GZ_EDITOR_SECTION_GUILD = { enUS = "Guild chat", deDE = "Gildenchat" },
-    GZ_EDITOR_SECTION_WHISPER = { enUS = "Whisper", deDE = "Fluestern" },
+    GZ_EDITOR_SECTION_WHISPER = { enUS = "Whisper", deDE = "Flüstern" },
     GZ_EDITOR_EDIT_BUTTON = { enUS = "Edit text", deDE = "Text bearbeiten" },
     GZ_EDITOR_POOL_BUTTON = { enUS = "Manage variants", deDE = "Varianten verwalten" },
 
     -- GuildDing.lua - mehrzeiliger Varianten-Editor (echtes Fenster, kein StaticPopup)
     GZPOOL_EDITOR_TITLE_GUILD = { enUS = "Guild-chat variants", deDE = "Gildenchat-Varianten" },
-    GZPOOL_EDITOR_TITLE_WHISPER = { enUS = "Whisper variants", deDE = "Fluester-Varianten" },
+    GZPOOL_EDITOR_TITLE_WHISPER = { enUS = "Whisper variants", deDE = "Flüster-Varianten" },
     GZPOOL_EDITOR_HINT = {
         enUS = "One text per line. Guild-chat texts need %s (name) and %d (level), whisper texts need %d (level). Invalid lines are rejected and reported in the chat window when you save.",
-        deDE = "Ein Text pro Zeile. Gildenchat-Texte brauchen %s (Name) und %d (Level), Fluester-Texte brauchen %d (Level). Ungueltige Zeilen werden beim Speichern abgelehnt und im Chatfenster gemeldet.",
+        deDE = "Ein Text pro Zeile. Gildenchat-Texte brauchen %s (Name) und %d (Level), Flüster-Texte brauchen %d (Level). Ungültige Zeilen werden beim Speichern abgelehnt und im Chatfenster gemeldet.",
     },
     GZPOOL_EDITOR_SAVE = { enUS = "Save", deDE = "Speichern" },
     GZPOOL_EDITOR_BAD_LINES = {
@@ -304,15 +304,15 @@ local STRINGS = {
 
     -- GuildDing.lua - Varianten-Pool (/emberstone gzmsg guild|whisper pool ...)
     GZMSG_RANDOM_USAGE = { enUS = "Usage: /emberstone gzmsg guild|whisper random on|off", deDE = "Verwendung: /emberstone gzmsg guild|whisper random on|off" },
-    GZMSG_RANDOM_ON = { enUS = "Random variant enabled.", deDE = "Zufaellige Variante aktiviert." },
-    GZMSG_RANDOM_OFF = { enUS = "Random variant disabled, using the single fixed text again.", deDE = "Zufaellige Variante deaktiviert, es gilt wieder der einzelne feste Text." },
+    GZMSG_RANDOM_ON = { enUS = "Random variant enabled.", deDE = "Zufällige Variante aktiviert." },
+    GZMSG_RANDOM_OFF = { enUS = "Random variant disabled, using the single fixed text again.", deDE = "Zufällige Variante deaktiviert, es gilt wieder der einzelne feste Text." },
     GZMSG_POOL_HELP = {
         enUS = "Usage: /emberstone gzmsg guild|whisper pool add <text> | pool remove <n> | pool list",
         deDE = "Verwendung: /emberstone gzmsg guild|whisper pool add <Text> | pool remove <Nummer> | pool list",
     },
     GZMSG_POOL_ADD_USAGE = { enUS = "Usage: /emberstone gzmsg guild|whisper pool add <text>", deDE = "Verwendung: /emberstone gzmsg guild|whisper pool add <Text>" },
-    GZMSG_POOL_ADD_DONE = { enUS = "Variant added.", deDE = "Variante hinzugefuegt." },
-    GZMSG_POOL_REMOVE_INVALID = { enUS = "Invalid number.", deDE = "Ungueltige Nummer." },
+    GZMSG_POOL_ADD_DONE = { enUS = "Variant added.", deDE = "Variante hinzugefügt." },
+    GZMSG_POOL_REMOVE_INVALID = { enUS = "Invalid number.", deDE = "Ungültige Nummer." },
     GZMSG_POOL_REMOVE_DONE = { enUS = "Variant #%d removed.", deDE = "Variante Nr. %d entfernt." },
     GZMSG_POOL_LIST_EMPTY = { enUS = "No variants yet - the single fixed text is used.", deDE = "Noch keine Varianten - es gilt der einzelne feste Text." },
     GZMSG_POOL_LIST_HEADER = { enUS = "Variants:", deDE = "Varianten:" },
@@ -339,8 +339,8 @@ local STRINGS = {
     LOG_LEVEL_USAGE = { enUS = "Usage: /emberstone log level <n>", deDE = "Verwendung: /emberstone log level <Zahl>" },
     LOG_LEVEL_EMPTY = { enUS = "No one has reached level %d yet (or it wasn't logged).", deDE = "Bisher hat niemand Level %d erreicht (oder es wurde nicht protokolliert)." },
     LOG_PLAYER_USAGE = { enUS = "Usage: /emberstone log player <name>", deDE = "Verwendung: /emberstone log player <Name>" },
-    LOG_PLAYER_EMPTY = { enUS = "No logged level-ups found for %s.", deDE = "Keine protokollierten Levelaufstiege fuer %s gefunden." },
-    LOG_CLEARED = { enUS = "The level-up log was cleared.", deDE = "Das Levelaufstiegs-Protokoll wurde geloescht." },
+    LOG_PLAYER_EMPTY = { enUS = "No logged level-ups found for %s.", deDE = "Keine protokollierten Levelaufstiege für %s gefunden." },
+    LOG_CLEARED = { enUS = "The level-up log was cleared.", deDE = "Das Levelaufstiegs-Protokoll wurde gelöscht." },
     LOG_EMPTY = { enUS = "The level-up log is currently empty.", deDE = "Das Levelaufstiegs-Protokoll ist aktuell leer." },
     LOG_RECENT_HEADER = { enUS = "Most recent level-ups:", deDE = "Zuletzt protokollierte Levelaufstiege:" },
     LOG_ENTRY_LINE = { enUS = "%s reached level %d on %s", deDE = "%s hat Level %d erreicht am %s" },
@@ -388,6 +388,14 @@ local STRINGS = {
     MINIMAP_TOOLTIP_DRAG = { enUS = "Drag to move the button", deDE = "Ziehen verschiebt das Symbol" },
     MINIMAP_ON = { enUS = "Emberstone: minimap button shown.", deDE = "Emberstone: Minimap-Symbol eingeblendet." },
     MINIMAP_OFF = { enUS = "Emberstone: minimap button hidden. Show it again with /emberstone minimap", deDE = "Emberstone: Minimap-Symbol ausgeblendet. Wieder einblenden mit /emberstone minimap" },
+    MINIMAP_USAGE = {
+        enUS = "Usage: /emberstone minimap [on|off|show|hide] (without an argument it toggles the button)",
+        deDE = "Verwendung: /emberstone minimap [on|off|show|hide] (ohne Zusatz wird das Symbol umgeschaltet)",
+    },
+    OPTIONS_IN_COMBAT = {
+        enUS = "Emberstone: The options cannot be opened during combat. Please try again after the fight.",
+        deDE = "Emberstone: Im Kampf lassen sich die Optionen nicht öffnen. Bitte nach dem Kampf erneut versuchen.",
+    },
 }
 
 local L = setmetatable({}, {

@@ -13,6 +13,14 @@ function Addon:GetDelay(key)
     return value
 end
 
+-- Entfernt Leerzeichen am Anfang und Ende (z.B. nach Kopieren und
+-- Einfuegen). Leerzeichen IM Namen bleiben erhalten (Forever: Vor- und
+-- Nachname).
+function Addon:Trim(s)
+    if type(s) ~= "string" then return "" end
+    return (s:match("^%s*(.-)%s*$"))
+end
+
 function Addon:NumToString(n)
     if n == 0 then
         return "0"

@@ -49,7 +49,7 @@ local function Build()
     local icon = b:CreateTexture(nil, "ARTWORK")
     icon:SetSize(19, 19)
     icon:SetPoint("TOPLEFT", 7, -6)
-    icon:SetTexture("Interface\\AddOns\\Emberstone\\Assets\\minimap.tga")
+    icon:SetTexture("Interface\\AddOns\\" .. ADDON_NAME .. "\\Assets\\minimap.tga")
     icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
 
     b:SetScript("OnMouseDown", function() icon:SetPoint("TOPLEFT", 8, -7) end)
@@ -102,6 +102,13 @@ function Addon:SetMinimapShown(show)
 end
 
 function Addon:OpenOptions()
+    -- Blizzard fuehrt das Oeffnen des Optionsfensters als eingeschraenkte
+    -- Aktion (C_SettingsUtil.OpenSettingsPanel, "HasRestrictions") - im
+    -- Kampf lieber einen Hinweis zeigen, statt eine Sperre auszuloesen.
+    if InCombatLockdown and InCombatLockdown() then
+        print(L["OPTIONS_IN_COMBAT"])
+        return
+    end
     if self.OptionsCategory and self.OptionsCategory.ID and Settings and Settings.OpenToCategory then
         Settings.OpenToCategory(self.OptionsCategory.ID)
     else

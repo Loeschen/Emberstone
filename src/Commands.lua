@@ -48,7 +48,19 @@ function Addon:HandleSlash(msg)
     end
 
     if cmd == "minimap" then
-        self:SetMinimapShown(self:GetSetting("minimapHide") and true or false)
+        local arg = self:Trim(rest):lower()
+        local show
+        if arg == "" then
+            show = self:GetSetting("minimapHide") and true or false -- umschalten
+        elseif arg == "on" or arg == "show" then
+            show = true
+        elseif arg == "off" or arg == "hide" then
+            show = false
+        else
+            print(Addon.L["MINIMAP_USAGE"])
+            return
+        end
+        self:SetMinimapShown(show)
         print(self:GetSetting("minimapHide") and Addon.L["MINIMAP_OFF"] or Addon.L["MINIMAP_ON"])
         return
     end
