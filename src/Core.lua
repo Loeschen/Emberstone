@@ -97,4 +97,9 @@ function Addon:OnInitialize()
     if self.SetupSlash then
         self:SetupSlash()
     end
+
+    -- 8) Minimap-Symbol (ausblendbar unter Optionen -> Sonstiges)
+    if self.UpdateMinimapButton then
+        pcall(self.UpdateMinimapButton, self)
+    end
 end

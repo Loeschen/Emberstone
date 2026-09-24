@@ -47,9 +47,11 @@ function Addon:HandleSlash(msg)
         return
     end
 
-    if self.OptionsCategory and self.OptionsCategory.ID then
-        Settings.OpenToCategory(self.OptionsCategory.ID)
-    else
-        print(Addon.L["OPTIONS_UNAVAILABLE"])
+    if cmd == "minimap" then
+        self:SetMinimapShown(self:GetSetting("minimapHide") and true or false)
+        print(self:GetSetting("minimapHide") and Addon.L["MINIMAP_OFF"] or Addon.L["MINIMAP_ON"])
+        return
     end
+
+    self:OpenOptions()
 end

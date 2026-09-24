@@ -376,6 +376,18 @@ local STRINGS = {
     },
     OPT_AFK_EDIT_BUTTON = { enUS = "Edit sayings", deDE = "Sprüche bearbeiten" },
     OPT_AFK_TEST_BUTTON = { enUS = "Show example", deDE = "Beispiel zeigen" },
+
+    -- Minimap.lua (seit v1.12)
+    OPT_MINIMAP_LABEL = { enUS = "Show minimap button", deDE = "Minimap-Symbol anzeigen" },
+    OPT_MINIMAP_TOOLTIP = {
+        enUS = "Shows the Emberstone button at the edge of the minimap. Left click opens these options, right click shows a test notification. Also: /emberstone minimap",
+        deDE = "Zeigt das Emberstone-Symbol am Rand der Minimap. Linksklick öffnet diese Optionen, Rechtsklick zeigt eine Test-Benachrichtigung. Auch: /emberstone minimap",
+    },
+    MINIMAP_TOOLTIP_LEFT = { enUS = "Left click: options", deDE = "Linksklick: Optionen" },
+    MINIMAP_TOOLTIP_RIGHT = { enUS = "Right click: test notification", deDE = "Rechtsklick: Test-Benachrichtigung" },
+    MINIMAP_TOOLTIP_DRAG = { enUS = "Drag to move the button", deDE = "Ziehen verschiebt das Symbol" },
+    MINIMAP_ON = { enUS = "Emberstone: minimap button shown.", deDE = "Emberstone: Minimap-Symbol eingeblendet." },
+    MINIMAP_OFF = { enUS = "Emberstone: minimap button hidden. Show it again with /emberstone minimap", deDE = "Emberstone: Minimap-Symbol ausgeblendet. Wieder einblenden mit /emberstone minimap" },
 }
 
 local L = setmetatable({}, {

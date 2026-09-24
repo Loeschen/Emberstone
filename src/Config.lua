@@ -48,6 +48,10 @@ Addon.Defaults = {
     -- ob man ein Gruppenfoto machen moechte. Auf Wunsch standardmaessig AUS.
     groupPhotoReminderEnabled     = false,
 
+    -- Minimap-Symbol (seit v1.12, siehe Minimap.lua)
+    minimapHide                   = false,
+    minimapAngle                  = 240, -- Grad; Grindkeep sitzt bei 215, Loreclash bei 190
+
     -- Gildenweite Levelup-Benachrichtigungen - urspruenglich das eigenstaendige Addon "GrindDing"
     guildDingEnabled              = true,
     guildDingChat                 = true,

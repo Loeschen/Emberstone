@@ -459,6 +459,13 @@ function Addon:RegisterOptions()
         function(value) Addon:SetSetting("groupPhotoReminderEnabled", value) end,
         Addon.Defaults.groupPhotoReminderEnabled)
 
+    -- Minimap-Symbol: gespeichert wird "ausblenden", angezeigt "anzeigen"
+    AddCheckbox(category, "emberstone_showMinimapButton", L["OPT_MINIMAP_LABEL"],
+        L["OPT_MINIMAP_TOOLTIP"],
+        function() return not Addon:GetSetting("minimapHide") end,
+        function(value) Addon:SetMinimapShown(value) end,
+        true)
+
     ------------------------------------------------------------------
     -- Unterseite: Erfolge & Level
     ------------------------------------------------------------------
