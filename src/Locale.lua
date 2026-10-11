@@ -439,8 +439,12 @@ local STRINGS = {
         deDE = "Emberstone-Glitzern: Quest-Gegenstände/Beute %s, Kräuter %s, Erzadern %s, Questobjekte %s.",
     },
     SPARKLE_DEBUG = {
-        enUS = "Emberstone sparkle test: object selected %s, cursor %s, type %s, not usable %s, profession missing %s.",
-        deDE = "Emberstone-Glitzer-Test: Objekt ausgewählt %s, Cursor %s, Art %s, nicht nutzbar %s, Beruf fehlt %s.",
+        enUS = "Emberstone sparkle test: plate unit %s, GUID type %s, game object %s, cursor %s, type %s, not usable %s, profession missing %s, plate found %s, visible plates %d.",
+        deDE = "Emberstone-Glitzer-Test: Plaketten-Einheit %s, GUID-Art %s, Spielobjekt %s, Cursor %s, Art %s, nicht nutzbar %s, Beruf fehlt %s, Plakette gefunden %s, sichtbare Plaketten %d.",
+    },
+    SPARKLE_DEBUG_SETTINGS = {
+        enUS = "Emberstone sparkle settings: herbs %s, ore veins %s, quest objects %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, in combat %s.",
+        deDE = "Emberstone-Glitzer-Einstellungen: Kräuter %s, Erzadern %s, Questobjekte %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, im Kampf %s.",
     },
     SPARKLE_STATE_ON = { enUS = "on", deDE = "an" },
     SPARKLE_STATE_OFF = { enUS = "off", deDE = "aus" },

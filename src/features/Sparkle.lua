@@ -184,18 +184,77 @@ end
 -- ------------------------------------------------------------
 -- Teil 2: Erkennen, was gerade per Soft Targeting ausgewaehlt ist
 -- ------------------------------------------------------------
+-- WICHTIG (Live-Fund auf Forever, v1.13): Fuer Spielobjekte wie Kraeuter
+-- liefert UnitExists("softinteract") false, obwohl das Spiel das Objekt
+-- ausgewaehlt hat und sein Symbol zeigt. Blizzards eigener Code
+-- (Blizzard_NamePlates.lua) fragt deshalb nie UnitExists, sondern geht ueber
+-- die Namensplakette: Er vergleicht deren Einheit ("nameplateN") per
+-- UnitIsUnit mit "softinteract" und holt das Symbol mit SetUnitCursorTexture
+-- fuer genau diese Plaketten-Einheit. Emberstone macht es jetzt genauso.
 local UNIT = "softinteract"
 local probe -- unsichtbare Textur, in die der Client das Cursor-Symbol legt
+local plateTokens = {} -- aktuell sichtbare Namensplaketten ("nameplateN")
+
+local function PlateUnit(plate)
+    if not plate then return nil end
+    if plate.GetUnit then
+        local ok, unit = pcall(plate.GetUnit, plate)
+        if ok and type(unit) == "string" then return unit end
+    end
+    return plate.unitToken or plate.namePlateUnitToken
+end
+
+local function IsSoftTarget(unit)
+    if not (UnitIsUnit and unit) then return false end
+    local ok, same = pcall(UnitIsUnit, unit, UNIT)
+    return ok and same == true
+end
+
+-- Sucht die Plaketten-Einheit des Soft-Target-Objekts. Rueckgabe: unit oder nil
+local function FindSoftUnit()
+    for token in pairs(plateTokens) do
+        if IsSoftTarget(token) then return token end
+    end
+    -- Plaketten, die schon vor dem Laden da waren (z.B. nach /reload)
+    if C_NamePlate and C_NamePlate.GetNamePlates then
+        local ok, plates = pcall(C_NamePlate.GetNamePlates)
+        if ok and type(plates) == "table" then
+            for _, plate in ipairs(plates) do
+                local token = PlateUnit(plate)
+                if IsSoftTarget(token) then
+                    plateTokens[token] = true
+                    return token
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- Ist die Einheit ein Spielobjekt (kein NPC/Spieler)? true/false/nil (unbekannt)
+local function IsGameObjectUnit(unit)
+    if UnitGUID then
+        local ok, guid = pcall(UnitGUID, unit)
+        if ok and type(guid) == "string" and not (issecretvalue and issecretvalue(guid)) then
+            return guid:find("^GameObject") ~= nil
+        end
+    end
+    if UnitIsGameObject then
+        local ok, isObject = pcall(UnitIsGameObject, unit)
+        if ok and type(isObject) == "boolean" then return isObject end
+    end
+    return nil
+end
 
 -- Welches Cursor-Symbol zeigt der Client fuer das Objekt? (Pfad oder ID)
-local function CursorValue()
+local function CursorValue(unit)
     if not SetUnitCursorTexture or not UIParent then return nil end
     if not probe then
         probe = UIParent:CreateTexture(nil, "BACKGROUND")
         probe:SetSize(1, 1)
         probe:SetAlpha(0)
     end
-    local ok, has = pcall(SetUnitCursorTexture, probe, UNIT)
+    local ok, has = pcall(SetUnitCursorTexture, probe, unit)
     if not ok or not has then return nil end
     if probe.GetTextureFilePath then
         local okPath, path = pcall(probe.GetTextureFilePath, probe)
@@ -216,16 +275,17 @@ local function HasProfession(skillLine)
     return false
 end
 
--- Liefert eine Tabelle { kind = "herb"|"ore"|"quest"|nil, unable, noSkill, cursor }
+-- Liefert eine Tabelle { unit, isObject, kind = "herb"|"ore"|"quest"|nil,
+-- unable, noSkill, cursor }
 function Addon:ClassifySoftInteract()
     local info = {}
-    if not (UnitExists and UnitExists(UNIT)) then return info end
-    if UnitIsGameObject then
-        local ok, isObject = pcall(UnitIsGameObject, UNIT)
-        if ok and not isObject then return info end
-    end
+    local unit = FindSoftUnit()
+    info.unit = unit
+    if not unit then return info end
+    info.isObject = IsGameObjectUnit(unit)
+    if info.isObject == false then return info end -- NPCs/Spieler nicht
 
-    local cursor = CursorValue()
+    local cursor = CursorValue(unit)
     info.cursor = cursor
     local s = type(cursor) == "string" and cursor:lower() or ""
     info.unable = (s:find("unable", 1, true) or s:find("error", 1, true)) and true or false
@@ -238,7 +298,7 @@ function Addon:ClassifySoftInteract()
     end
 
     if not info.kind and C_QuestLog and C_QuestLog.UnitIsRelatedToActiveQuest then
-        local ok, related = pcall(C_QuestLog.UnitIsRelatedToActiveQuest, UNIT)
+        local ok, related = pcall(C_QuestLog.UnitIsRelatedToActiveQuest, unit)
         if ok and related == true then info.kind = "quest" end
     end
 
@@ -302,9 +362,9 @@ local function BuildGlitter()
     return f
 end
 
-local function SoftPlate()
-    if not (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then return nil end
-    local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, UNIT)
+local function SoftPlate(unit)
+    if not (unit and C_NamePlate and C_NamePlate.GetNamePlateForUnit) then return nil end
+    local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
     if ok then return plate end
     return nil
 end
@@ -313,9 +373,10 @@ UpdateGlitter = function()
     local function hide() if glitter then glitter:Hide() end end
     if not GROUPS.soft.wanted() or Addon:GetSparkleConflict() or InCombat() then return hide() end
 
-    local r, g, b, alpha, grey = Addon:GetSparkleLook(Addon:ClassifySoftInteract())
+    local info = Addon:ClassifySoftInteract()
+    local r, g, b, alpha, grey = Addon:GetSparkleLook(info)
     if not r then return hide() end
-    local plate = SoftPlate()
+    local plate = SoftPlate(info.unit)
     if not plate then return hide() end
 
     local f = BuildGlitter()
@@ -370,6 +431,11 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
         end
     else
         -- Namensplaketten / Soft-Target gewechselt
+        if event == "NAME_PLATE_UNIT_ADDED" and type(arg1) == "string" then
+            plateTokens[arg1] = true
+        elseif event == "NAME_PLATE_UNIT_REMOVED" and type(arg1) == "string" then
+            plateTokens[arg1] = nil
+        end
         UpdateGlitter()
     end
 end)
@@ -383,9 +449,19 @@ function Addon:HandleSparkleCommand(rest)
     local sub = self:Trim(rest):lower()
     if sub == "debug" then
         local info = self:ClassifySoftInteract()
+        local guid = info.unit and UnitGUID and select(2, pcall(UnitGUID, info.unit))
+        local guidType = type(guid) == "string" and not (issecretvalue and issecretvalue(guid))
+            and (guid:match("^([^%-]+)") or "?") or tostring(guid)
+        local plateCount = 0
+        for _ in pairs(plateTokens) do plateCount = plateCount + 1 end
         print(string.format(L["SPARKLE_DEBUG"],
-            tostring(UnitExists and UnitExists(UNIT) or false), tostring(info.cursor),
-            tostring(info.kind), tostring(info.unable), tostring(info.noSkill)))
+            tostring(info.unit), guidType, tostring(info.isObject), tostring(info.cursor),
+            tostring(info.kind), tostring(info.unable), tostring(info.noSkill),
+            tostring(SoftPlate(info.unit) ~= nil), plateCount))
+        print(string.format(L["SPARKLE_DEBUG_SETTINGS"],
+            OnOff(self:GetSetting("sparkleHerbs")), OnOff(self:GetSetting("sparkleOre")),
+            OnOff(self:GetSetting("sparkleQuestObjects")), tostring(CVarGet("softTargetInteract")),
+            tostring(CVarGet("SoftTargetIconGameObject")), tostring(InCombat())))
         return
     end
     local conflict = self:GetSparkleConflict()

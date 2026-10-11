@@ -526,8 +526,11 @@ for _, profile in ipairs({ "retail", "forever" }) do
 
     -- Soft-Target-Szenarien (Cursor-Dateinamen sind ANNAHMEN fuer den Test)
     local function soft(A, cursor, extra)
-        M.soft = { cursor = cursor, plate = M.NewFrame("Frame", nil) }
+        local plate = M.NewFrame("Frame", nil)
+        plate.GetUnit = function() return "nameplate1" end
+        M.soft = { token = "nameplate1", guid = "GameObject-0-1-2-3-1617-0001", cursor = cursor, plate = plate }
         for k, v in pairs(extra or {}) do M.soft[k] = v end
+        if not (extra and extra.noAddedEvent) then M.FireEvent("NAME_PLATE_UNIT_ADDED", "nameplate1") end
         M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "GameObject-1")
         return A._sparkleGlitter()
     end
@@ -582,6 +585,51 @@ for _, profile in ipairs({ "retail", "forever" }) do
         M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "GameObject-1", "")
         g = A._sparkleGlitter()
         assert(not g or not g:IsShown(), "ohne Objekt")
+    end)
+
+    test("Glitzern: Objekt wird erkannt, obwohl UnitExists(softinteract) false ist (Forever-Fund)", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        M.profs = { 182 }
+        local g = soft(A, "Interface\\Cursor\\GatherHerbs")
+        eq(UnitExists("softinteract"), false, "Mock wie auf Forever")
+        assert(g and g:IsShown(), "nicht erkannt")
+        local info = A:ClassifySoftInteract()
+        eq(info.unit, "nameplate1", "Plaketten-Einheit")
+        eq(info.isObject, true, "Spielobjekt")
+    end)
+
+    test("Glitzern: Plakette schon vor dem Laden da (/reload) wird gefunden", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        local g = soft(A, "Interface\\Cursor\\GatherHerbs", { noAddedEvent = true })
+        assert(g and g:IsShown(), "ohne NAME_PLATE_UNIT_ADDED nicht gefunden")
+    end)
+
+    test("Glitzern: NPC als Soft-Target glitzert nicht", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleQuestObjects", true)
+        local g = soft(A, "Interface\\Cursor\\Quest", { guid = "Creature-0-1-2-3-4-5", quest = true })
+        assert(not g or not g:IsShown(), "NPC glitzert")
+    end)
+
+    test("Glitzern: Plakette entfernt -> Glitzern weg", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        local g = soft(A, "Interface\\Cursor\\GatherHerbs")
+        assert(g:IsShown())
+        M.soft = nil
+        M.FireEvent("NAME_PLATE_UNIT_REMOVED", "nameplate1")
+        eq(g:IsShown(), false)
+    end)
+
+    test("Glitzern: Debug-Ausgabe nennt Plaketten-Einheit und GUID-Art", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        soft(A, "Interface\\Cursor\\GatherHerbs")
+        SlashCmdList.EMBERSTONE("sparkle debug")
+        assert(has(M.printed, "nameplate1"), "Einheit fehlt")
+        assert(has(M.printed, "GameObject"), "GUID-Art fehlt")
     end)
 
     test("Glitzern: Glitzer-Grafik aus dem Addon-Ordner", function()

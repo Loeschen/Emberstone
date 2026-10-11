@@ -35,7 +35,10 @@ function M.reset(profile, locale)
     }
     M.cvarSets = {}        -- { {name, value, inCombat} }
     M.loadedAddons = {}
-    M.soft = nil           -- { cursor =, plate =, quest =, gameObject = }
+    -- Soft-Target-Objekt, so wie auf Forever beobachtet: UnitExists("softinteract")
+    -- ist fuer Spielobjekte FALSE; erreichbar nur ueber die Plaketten-Einheit
+    -- (token, z.B. "nameplate1") und UnitIsUnit(token, "softinteract").
+    M.soft = nil           -- { token =, guid =, cursor =, plate =, quest = }
     M.profs = {}           -- Skill-Line-IDs der Hauptberufe
     M.profile, M.locale = profile or "retail", locale or "deDE"
     M.install()
@@ -176,18 +179,32 @@ function M.install()
     end
     _G.C_CVar = nil
     _G.C_AddOns = { IsAddOnLoaded = function(name) return M.loadedAddons[name] and true or false end }
-    _G.UnitExists = function(u) if u == "softinteract" then return M.soft ~= nil end return false end
-    _G.UnitIsGameObject = function(u) return u == "softinteract" and M.soft ~= nil and M.soft.gameObject ~= false end
+    local function isSoftToken(u) return M.soft ~= nil and u == M.soft.token end
+    _G.UnitExists = function(u) return isSoftToken(u) end -- "softinteract" absichtlich false
+    _G.UnitIsUnit = function(a, b)
+        if a == b then return true end
+        return M.soft ~= nil and ((a == M.soft.token and b == "softinteract") or (b == M.soft.token and a == "softinteract"))
+    end
+    _G.UnitIsGameObject = function(u) return isSoftToken(u) and M.soft.guid:find("^GameObject") ~= nil end
     _G.SetUnitCursorTexture = function(tex, unit)
-        if unit == "softinteract" and M.soft and M.soft.cursor then tex._file = M.soft.cursor; return true end
+        if isSoftToken(unit) and M.soft.cursor then tex._file = M.soft.cursor; return true end
         return false
     end
-    _G.C_NamePlate = { GetNamePlateForUnit = function(u) return u == "softinteract" and M.soft and M.soft.plate or nil end }
-    _G.C_QuestLog = { UnitIsRelatedToActiveQuest = function(u) return u == "softinteract" and M.soft and M.soft.quest or false end }
+    _G.C_NamePlate = {
+        GetNamePlateForUnit = function(u) return isSoftToken(u) and M.soft.plate or nil end,
+        GetNamePlates = function()
+            if M.soft and M.soft.plate then return { M.soft.plate } end
+            return {}
+        end,
+    }
+    _G.C_QuestLog = { UnitIsRelatedToActiveQuest = function(u) return isSoftToken(u) and M.soft.quest or false end }
     _G.GetProfessions = function() return (M.profs[1] and 1 or nil), (M.profs[2] and 2 or nil) end
     _G.GetProfessionInfo = function(i) return "Beruf", 0, 1, 100, 0, 0, M.profs[i] end
     _G.UnitName = function(u) if u == "player" then return M.playerName or "Anna Müller" end end
-    _G.UnitGUID = function(u) if u == "player" then return "Player-1-0001" end end
+    _G.UnitGUID = function(u)
+        if u == "player" then return "Player-1-0001" end
+        if M.soft and u == M.soft.token then return M.soft.guid end
+    end
     _G.UnitIsAFK = function() return false end
     _G.UnitIsDead = function() return false end
     _G.UnitClassification = function() return "normal" end

@@ -7,6 +7,7 @@
   - Kräuter, Erzadern und Questobjekte glitzern beim Näherkommen (ab Werk aus, drei Schalter). Eigene Glitzer-Grafik, schwach außer Reichweite, hell in Reichweite, grau ohne passenden Beruf. Über das Soft Targeting des Spiels, im Kampf aus. Die vorherigen Zielauswahl-Einstellungen kommen zurück, sobald alle drei Schalter aus sind.
   - Ist ForeverLootSparkles oder Lueur geladen, bleibt das Glitzern aus; die Optionen zeigen einen Hinweis.
 - Neu: `/emberstone sparkle` (Status) und `/emberstone sparkle debug` (Erkennung am ausgewählten Objekt).
+- Behoben (Forever-Test): Kräuter und Erzadern wurden nicht erkannt, weil das Spiel ausgewählte Spielobjekte nicht als „vorhanden“ meldet. Emberstone findet das Objekt jetzt wie Blizzards eigene Anzeige über dessen Namensplakette. `/emberstone sparkle debug` zeigt dazu mehr Angaben.
 - Konsolenvariablen, die der Client nicht kennt, werden übersprungen.
 - Tests ergänzt; ein Test aus 1.12 hing von der Uhrzeit ab und ist jetzt stabil.
 
