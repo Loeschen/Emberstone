@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.13 (Beta)
+
+- Neu: Glitzern (Optionen → Emberstone → Glitzern).
+  - Quest-Gegenstände und Beute glitzern (ab Werk an). Emberstone schaltet dafür die Umriss-Darstellung aus und setzt die Werte beim Login, nach Grafikänderungen und nach einem Grafik-Neustart erneut. Im Kampf wird nichts geändert, sondern direkt danach. Beim Ausschalten kommen die vorherigen Werte zurück.
+  - Kräuter, Erzadern und Questobjekte glitzern beim Näherkommen (ab Werk aus, drei Schalter). Eigene Glitzer-Grafik, schwach außer Reichweite, hell in Reichweite, grau ohne passenden Beruf. Über das Soft Targeting des Spiels, im Kampf aus. Die vorherigen Zielauswahl-Einstellungen kommen zurück, sobald alle drei Schalter aus sind.
+  - Ist ForeverLootSparkles oder Lueur geladen, bleibt das Glitzern aus; die Optionen zeigen einen Hinweis.
+- Neu: `/emberstone sparkle` (Status) und `/emberstone sparkle debug` (Erkennung am ausgewählten Objekt).
+- Konsolenvariablen, die der Client nicht kennt, werden übersprungen.
+- Tests ergänzt; ein Test aus 1.12 hing von der Uhrzeit ab und ist jetzt stabil.
+
 ## 1.12 (Beta)
 
 - Neu: Minimap-Symbol. Linksklick öffnet die Optionen, Rechtsklick zeigt eine Test-Benachrichtigung, Ziehen verschiebt das Symbol.

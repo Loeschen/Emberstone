@@ -47,6 +47,11 @@ function Addon:HandleSlash(msg)
         return
     end
 
+    if cmd == "sparkle" then
+        self:HandleSparkleCommand(rest)
+        return
+    end
+
     if cmd == "minimap" then
         local arg = self:Trim(rest):lower()
         local show

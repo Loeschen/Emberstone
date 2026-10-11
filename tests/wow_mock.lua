@@ -26,7 +26,17 @@ function M.reset(profile, locale)
     M.sent, M.addonMsgs, M.raidNotices, M.timers = {}, {}, {}, {}
     M.screenshots, M.now, M.openedCategory, M.roster = 0, 1000, nil, {}
     M.errors, M.inCombat, M.lockdown, M.chatFilter = {}, false, false, nil
-    M.cvars = { screenshotQuality = "8" }
+    M.cvars = {
+        screenshotQuality = "8",
+        -- Werte "des Spielers" vor Emberstone (frei gewaehlt)
+        outlineModeShowLootEffectWhenDisabled = "0", graphicsOutlineMode = "2", OutlineEngineMode = "1",
+        raidGraphicsOutlineMode = "1", RAIDOutlineEngineMode = "1", graphicsQuality = "7",
+        softTargetInteract = "1", SoftTargetIconGameObject = "0", SoftTargetIconInteract = "1",
+    }
+    M.cvarSets = {}        -- { {name, value, inCombat} }
+    M.loadedAddons = {}
+    M.soft = nil           -- { cursor =, plate =, quest =, gameObject = }
+    M.profs = {}           -- Skill-Line-IDs der Hauptberufe
     M.profile, M.locale = profile or "retail", locale or "deDE"
     M.install()
 end
@@ -68,6 +78,12 @@ function frameMT:ClearAllPoints() self._points = {} end
 function frameMT:SetPoint(...) table.insert(self._points, { ... }) end
 function frameMT:GetParent() return self._parent end
 function frameMT:CreateTexture() return NewFrame("Texture") end
+function frameMT:SetTexture(path) self._file = path end
+function frameMT:GetTexture() return self._file end
+function frameMT:GetTextureFilePath() return self._file end
+function frameMT:SetAlpha(a) self._alpha = a end
+function frameMT:SetVertexColor(r, g, b) self._color = { r, g, b } end
+function frameMT:SetDesaturated(d) self._desat = d end
 function frameMT:CreateFontString() return NewFrame("FontString") end
 function frameMT:SetText(t) self._text = t end
 function frameMT:GetText() return self._text end
@@ -150,11 +166,29 @@ function M.install()
     }
     _G.Screenshot = function() M.screenshots = M.screenshots + 1 end
     _G.GetCVar = function(k) return M.cvars[k] end
-    _G.SetCVar = function(k, v) M.cvars[k] = v end
+    _G.SetCVar = function(k, v)
+        if M.cvars[k] == nil then error("unknown cvar " .. tostring(k)) end
+        v = tostring(v)
+        table.insert(M.cvarSets, { k, v, M.inCombat })
+        M.cvars[k] = v
+        M.FireEvent("CVAR_UPDATE", k, v) -- wie im Client: auch fuer eigene Aenderungen
+        return true
+    end
+    _G.C_CVar = nil
+    _G.C_AddOns = { IsAddOnLoaded = function(name) return M.loadedAddons[name] and true or false end }
+    _G.UnitExists = function(u) if u == "softinteract" then return M.soft ~= nil end return false end
+    _G.UnitIsGameObject = function(u) return u == "softinteract" and M.soft ~= nil and M.soft.gameObject ~= false end
+    _G.SetUnitCursorTexture = function(tex, unit)
+        if unit == "softinteract" and M.soft and M.soft.cursor then tex._file = M.soft.cursor; return true end
+        return false
+    end
+    _G.C_NamePlate = { GetNamePlateForUnit = function(u) return u == "softinteract" and M.soft and M.soft.plate or nil end }
+    _G.C_QuestLog = { UnitIsRelatedToActiveQuest = function(u) return u == "softinteract" and M.soft and M.soft.quest or false end }
+    _G.GetProfessions = function() return (M.profs[1] and 1 or nil), (M.profs[2] and 2 or nil) end
+    _G.GetProfessionInfo = function(i) return "Beruf", 0, 1, 100, 0, 0, M.profs[i] end
     _G.UnitName = function(u) if u == "player" then return M.playerName or "Anna Müller" end end
     _G.UnitGUID = function(u) if u == "player" then return "Player-1-0001" end end
     _G.UnitIsAFK = function() return false end
-    _G.UnitExists = function() return false end
     _G.UnitIsDead = function() return false end
     _G.UnitClassification = function() return "normal" end
     _G.UnitFactionGroup = function() return "Alliance" end

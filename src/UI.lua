@@ -308,6 +308,82 @@ local function RegisterAfkSubcategory(category)
     pcall(Settings.RegisterCanvasLayoutSubcategory, category, panel, L["OPT_SECTION_AFK"])
 end
 
+-- Eigene Canvas-Seite "Glitzern" (v1.13): vier Haken plus Hinweistexte.
+-- Wie bei der AFK-Seite mit den alten, stabilen Templates gebaut.
+-- Der Vertraeglichkeits-Hinweis wird beim Anzeigen neu geprueft, weil beim
+-- Bau der Seite (ADDON_LOADED) noch nicht alle Addons geladen sein muessen.
+local function BuildSparklePanel()
+    local panel = CreateFrame("Frame")
+    panel.name = L["OPT_SECTION_SPARKLE"]
+
+    local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 16, -16)
+    title:SetText(L["OPT_SECTION_SPARKLE"])
+
+    local conflict = panel:CreateFontString(nil, "OVERLAY", "GameFontRedSmall")
+    conflict:SetPoint("TOPLEFT", 20, -40)
+    conflict:SetWidth(440)
+    conflict:SetJustifyH("LEFT")
+
+    local y = -60
+    local boxes = {}
+    local function AddBox(key, label, tooltip)
+        local cb = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+        cb:SetPoint("TOPLEFT", 12, y)
+        if cb.Text then cb.Text:SetText(label) end
+        cb:SetScript("OnClick", function(self) Addon:SetSparkleOption(key, self:GetChecked()) end)
+        cb:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        cb:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        cb.settingKey = key
+        table.insert(boxes, cb)
+        y = y - 28
+        return cb
+    end
+
+    AddBox("sparkleQuestLoot", L["OPT_SPARKLE_LOOT_LABEL"], L["OPT_SPARKLE_LOOT_TOOLTIP"])
+    local restart = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    restart:SetPoint("TOPLEFT", 44, y + 4)
+    restart:SetWidth(420)
+    restart:SetJustifyH("LEFT")
+    restart:SetText(L["OPT_SPARKLE_RESTART_HINT"])
+    y = y - 36
+
+    AddBox("sparkleHerbs", L["OPT_SPARKLE_HERBS_LABEL"], L["OPT_SPARKLE_HERBS_TOOLTIP"])
+    AddBox("sparkleOre", L["OPT_SPARKLE_ORE_LABEL"], L["OPT_SPARKLE_ORE_TOOLTIP"])
+    AddBox("sparkleQuestObjects", L["OPT_SPARKLE_QUESTOBJ_LABEL"], L["OPT_SPARKLE_QUESTOBJ_TOOLTIP"])
+
+    local soft = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    soft:SetPoint("TOPLEFT", 20, y - 6)
+    soft:SetWidth(440)
+    soft:SetJustifyH("LEFT")
+    soft:SetText(L["OPT_SPARKLE_SOFT_HINT"])
+
+    local function Sync()
+        local other = Addon:GetSparkleConflict()
+        conflict:SetText(other and string.format(L["OPT_SPARKLE_CONFLICT"], other) or "")
+        for _, cb in ipairs(boxes) do
+            pcall(cb.SetChecked, cb, Addon:GetSetting(cb.settingKey) and true or false)
+            if cb.SetEnabled then pcall(cb.SetEnabled, cb, not other) end
+        end
+    end
+    Sync()
+    panel:SetScript("OnShow", Sync)
+    panel.Sync = Sync
+    return panel
+end
+
+local function RegisterSparkleSubcategory(category)
+    if not (Settings and Settings.RegisterCanvasLayoutSubcategory) then return end
+    local ok, panel = pcall(BuildSparklePanel)
+    if not ok or not panel then return end
+    Addon.SparklePanel = panel
+    pcall(Settings.RegisterCanvasLayoutSubcategory, category, panel, L["OPT_SECTION_SPARKLE"])
+end
+
 local function AddSlider(category, variable, name, tooltip, minValue, maxValue, step, default, getter, setter, formatter)
     local ok, setting = pcall(
         Settings.RegisterProxySetting,
@@ -545,6 +621,7 @@ function Addon:RegisterOptions()
     ------------------------------------------------------------------
     RegisterGuildSubcategory(category)
     RegisterAfkSubcategory(category)
+    RegisterSparkleSubcategory(category)
 
     pcall(Settings.RegisterAddOnCategory, category)
 end

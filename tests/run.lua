@@ -53,7 +53,8 @@ end
 test("Jeder benutzte Schlüssel hat deDE und enUS", function()
     local S = loadStrings()
     local files = { "src/Commands.lua", "src/Core.lua", "src/Events.lua", "src/Minimap.lua", "src/UI.lua",
-        "src/features/GuildDing.lua", "src/features/AfkText.lua", "src/features/Screenshots.lua" }
+        "src/features/GuildDing.lua", "src/features/AfkText.lua", "src/features/Screenshots.lua",
+        "src/features/Sparkle.lua" }
     local missing = {}
     for _, f in ipairs(files) do
         local c = io.open(ROOT .. "/" .. f):read("*a")
@@ -280,11 +281,13 @@ for _, profile in ipairs({ "retail", "forever" }) do
         eq(#A:GetIgnoreList(), 0, "Entfernen mit Realm")
         A:AddDingLogEntry("Anna Schmidt-Weber-Forever", 20)
         A:AddDingLogEntry("Anna Schmidt-Forever", 30)
+        for k in pairs(M.printed) do M.printed[k] = nil end
         SlashCmdList.EMBERSTONE("log player Anna Schmidt-Weber")
         assert(has(M.printed, "Anna Schmidt-Weber"), "Treffer fehlt")
-        for _, l in ipairs(M.printed) do
-            assert(not l:find("30", 1, true), "falscher Treffer: " .. l)
-        end
+        -- genau EIN Treffer (der Eintrag fuer Level 30 gehoert zu "Anna Schmidt")
+        local n = 0
+        for _, l in ipairs(M.printed) do if l:find("Anna Schmidt", 1, true) then n = n + 1 end end
+        eq(n, 1, "Anzahl Treffer")
     end)
 
     test("Ignorieren: gleicher Name auf anderem Realm, wenn mit Realm eingetragen", function()
@@ -394,6 +397,205 @@ for _, profile in ipairs({ "retail", "forever" }) do
         local A = boot(profile, locale, function() end)
         A:SetSetting("guildDingAutoGZGuildText", "Glueckwunsch %s zu %d!")
         eq(A:GetGZTemplate("guild"), "Glueckwunsch %s zu %d!")
+    end)
+
+    -- -------- Glitzern (v1.13) --------
+    local LOOT = { outlineModeShowLootEffectWhenDisabled = "1", graphicsOutlineMode = "0", OutlineEngineMode = "0",
+        raidGraphicsOutlineMode = "0", RAIDOutlineEngineMode = "0" }
+    local LOOT_OLD = { outlineModeShowLootEffectWhenDisabled = "0", graphicsOutlineMode = "2", OutlineEngineMode = "1",
+        raidGraphicsOutlineMode = "1", RAIDOutlineEngineMode = "1" }
+    local SOFT = { softTargetInteract = "3", SoftTargetIconGameObject = "1", SoftTargetIconInteract = "1" }
+    local SOFT_OLD = { softTargetInteract = "1", SoftTargetIconGameObject = "0", SoftTargetIconInteract = "1" }
+    local function cvarsAre(want, what)
+        for k, v in pairs(want) do eq(M.cvars[k], v, (what or "") .. " " .. k) end
+    end
+    local function setsInCombat()
+        local n = 0
+        for _, s in ipairs(M.cvarSets) do if s[3] then n = n + 1 end end
+        return n
+    end
+
+    test("Glitzern: ab Werk Quest-Beute an, Soft Targeting unverändert", function()
+        local A = boot(profile, locale)
+        eq(A:GetSetting("sparkleQuestLoot"), true)
+        eq(A:GetSetting("sparkleHerbs"), false)
+        cvarsAre(LOOT, "Beute")
+        cvarsAre(SOFT_OLD, "Soft")
+        eq(EmberstoneCommon.sparkleSaved.loot.graphicsOutlineMode, "2", "gespeichert")
+    end)
+
+    test("Glitzern: Ausschalten stellt die vorherigen Werte wieder her", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleQuestLoot", false)
+        cvarsAre(LOOT_OLD, "zurück")
+        eq(EmberstoneCommon.sparkleSaved.loot, nil, "Speicher geleert")
+        A:SetSparkleOption("sparkleQuestLoot", true)
+        cvarsAre(LOOT, "wieder an")
+    end)
+
+    test("Glitzern: Login im Kampf ändert nichts, nach dem Kampf nachgeholt", function()
+        boot(profile, locale, function() M.inCombat = true end)
+        cvarsAre(LOOT_OLD, "im Kampf")
+        eq(setsInCombat(), 0, "SetCVar im Kampf")
+        M.inCombat = false
+        M.FireEvent("PLAYER_REGEN_ENABLED")
+        cvarsAre(LOOT, "nach Kampf")
+    end)
+
+    test("Glitzern: Umschalten im Kampf -> Hinweis, danach übernommen", function()
+        local A = boot(profile, locale)
+        M.inCombat = true
+        A:SetSparkleOption("sparkleQuestLoot", false)
+        eq(setsInCombat(), 0, "SetCVar im Kampf")
+        assert(has(M.printed, A.L["SPARKLE_AFTER_COMBAT"]), "Hinweis fehlt")
+        cvarsAre(LOOT, "noch unverändert")
+        M.inCombat = false
+        M.FireEvent("PLAYER_REGEN_ENABLED")
+        cvarsAre(LOOT_OLD, "nach Kampf zurück")
+    end)
+
+    test("Glitzern: Grafik-Voreinstellung setzt Umriss -> neuer Spielerwert gemerkt, unserer wieder gesetzt", function()
+        local A = boot(profile, locale)
+        -- Voreinstellung gewaehlt: Client setzt Umriss-Modus auf 3
+        M.cvars.graphicsOutlineMode = "3"
+        M.FireEvent("CVAR_UPDATE", "graphicsOutlineMode", "3")
+        M.advance(1)
+        eq(M.cvars.graphicsOutlineMode, "0", "wieder gesetzt")
+        eq(EmberstoneCommon.sparkleSaved.loot.graphicsOutlineMode, "3", "neuer Spielerwert")
+        A:SetSparkleOption("sparkleQuestLoot", false)
+        eq(M.cvars.graphicsOutlineMode, "3", "beim Ausschalten")
+    end)
+
+    test("Glitzern: Voreinstellung ohne eigene Meldung je CVar wird trotzdem korrigiert", function()
+        boot(profile, locale)
+        M.cvars.raidGraphicsOutlineMode = "2"         -- still geaendert
+        M.cvars.graphicsQuality = "3"
+        M.FireEvent("CVAR_UPDATE", "graphicsQuality", "3")
+        M.advance(1)
+        eq(M.cvars.raidGraphicsOutlineMode, "0")
+        M.cvars.graphicsOutlineMode = "1"
+        M.FireEvent("GX_RESTARTED")
+        eq(M.cvars.graphicsOutlineMode, "0", "nach Grafik-Neustart")
+    end)
+
+    test("Glitzern: unbekannte CVar wird übersprungen (kein Fehler)", function()
+        boot(profile, locale, function() end)
+        M.reset(profile, locale)
+        M.cvars.OutlineEngineMode = nil
+        M.cvars.RAIDOutlineEngineMode = nil
+        M.LoadAddon(ROOT)
+        M.FireEvent("ADDON_LOADED", "Emberstone")
+        M.FireEvent("PLAYER_LOGIN")
+        eq(M.cvars.graphicsOutlineMode, "0")
+        eq(M.cvars.OutlineEngineMode, nil)
+        eq(EmberstoneCommon.sparkleSaved.loot.OutlineEngineMode, nil, "nicht gespeichert")
+        eq(#M.errors, 0)
+    end)
+
+    test("Glitzern: Soft Targeting erst mit einem Schalter, zurück erst wenn alle drei aus", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        cvarsAre(SOFT, "Kräuter an")
+        A:SetSparkleOption("sparkleOre", true)
+        A:SetSparkleOption("sparkleHerbs", false)
+        cvarsAre(SOFT, "Erz noch an")
+        A:SetSparkleOption("sparkleQuestObjects", true)
+        A:SetSparkleOption("sparkleOre", false)
+        cvarsAre(SOFT, "Questobjekte noch an")
+        A:SetSparkleOption("sparkleQuestObjects", false)
+        cvarsAre(SOFT_OLD, "alle aus")
+        cvarsAre(LOOT, "Beute bleibt")
+    end)
+
+    test("Glitzern: ForeverLootSparkles geladen -> nichts eingeschaltet, Hinweis", function()
+        local A = boot(profile, locale, function() M.loadedAddons.ForeverLootSparkles = true end)
+        cvarsAre(LOOT_OLD, "unverändert")
+        eq(#M.cvarSets, 0, "SetCVar-Aufrufe")
+        A:SetSparkleOption("sparkleHerbs", true)
+        cvarsAre(SOFT_OLD, "Soft unverändert")
+        SlashCmdList.EMBERSTONE("sparkle")
+        assert(has(M.printed, "ForeverLootSparkles"), "Hinweis im Chat")
+    end)
+
+    test("Glitzern: Lueur geladen -> Optionen zeigen Hinweis, Haken gesperrt", function()
+        local A = boot(profile, locale, function() M.loadedAddons.Lueur = true end)
+        assert(A.SparklePanel, "Glitzer-Seite fehlt")
+        A.SparklePanel.Sync()
+        eq(#M.cvarSets, 0, "SetCVar-Aufrufe")
+    end)
+
+    -- Soft-Target-Szenarien (Cursor-Dateinamen sind ANNAHMEN fuer den Test)
+    local function soft(A, cursor, extra)
+        M.soft = { cursor = cursor, plate = M.NewFrame("Frame", nil) }
+        for k, v in pairs(extra or {}) do M.soft[k] = v end
+        M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "GameObject-1")
+        return A._sparkleGlitter()
+    end
+
+    test("Glitzern: Kraut in Reichweite hell, außer Reichweite schwach, ohne Beruf grau", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        M.profs = { 182 }
+        local g = soft(A, "Interface\\Cursor\\GatherHerbs")
+        assert(g and g:IsShown(), "nicht sichtbar")
+        eq(g.baseAlpha, 1.0, "hell")
+        eq(g.tex._desat, false, "nicht grau")
+        soft(A, "Interface\\Cursor\\UnableGatherHerbs")
+        eq(g.baseAlpha, 0.35, "schwach")
+        M.profs = { 186 }
+        soft(A, "Interface\\Cursor\\GatherHerbs")
+        eq(g.tex._desat, true, "grau ohne Kräuterkunde")
+    end)
+
+    test("Glitzern: Erz nur mit Erz-Schalter", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        M.profs = { 186 }
+        local g = soft(A, "Interface\\Cursor\\Mine")
+        assert(not g or not g:IsShown(), "Erz glitzert ohne Erz-Schalter")
+        A:SetSparkleOption("sparkleOre", true)
+        g = soft(A, "Interface\\Cursor\\Mine")
+        assert(g and g:IsShown(), "Erz glitzert nicht")
+        eq(g.tex._desat, false)
+    end)
+
+    test("Glitzern: Questobjekt über Quest-Zuordnung, im Kampf aus", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleQuestObjects", true)
+        local g = soft(A, "Interface\\Cursor\\Interact", { quest = true })
+        assert(g and g:IsShown(), "Questobjekt glitzert nicht")
+        M.inCombat = true
+        M.FireEvent("PLAYER_REGEN_DISABLED")
+        eq(g:IsShown(), false, "im Kampf")
+        M.inCombat = false
+        M.FireEvent("PLAYER_REGEN_ENABLED")
+        eq(g:IsShown(), true, "nach Kampf")
+    end)
+
+    test("Glitzern: ohne Namensplakette oder ohne Objekt nichts", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        M.profs = { 182 }
+        local g = soft(A, "Interface\\Cursor\\GatherHerbs", { plate = false })
+        assert(not g or not g:IsShown(), "ohne Plakette")
+        M.soft = nil
+        M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "GameObject-1", "")
+        g = A._sparkleGlitter()
+        assert(not g or not g:IsShown(), "ohne Objekt")
+    end)
+
+    test("Glitzern: Glitzer-Grafik aus dem Addon-Ordner", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        local g = soft(A, "Interface\\Cursor\\GatherHerbs")
+        eq(g.tex._file, "Interface\\AddOns\\Emberstone\\Assets\\sparkle.tga")
+    end)
+
+    test("Glitzern: /emberstone sparkle und sparkle debug ohne Fehler", function()
+        local A = boot(profile, locale)
+        SlashCmdList.EMBERSTONE("sparkle")
+        SlashCmdList.EMBERSTONE("sparkle debug")
+        assert(#M.printed >= 2)
     end)
 
     -- -------- Screenshots --------

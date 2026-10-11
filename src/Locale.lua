@@ -392,6 +392,59 @@ local STRINGS = {
         enUS = "Usage: /emberstone minimap [on|off|show|hide] (without an argument it toggles the button)",
         deDE = "Verwendung: /emberstone minimap [on|off|show|hide] (ohne Zusatz wird das Symbol umgeschaltet)",
     },
+    -- Sparkle.lua (seit v1.13)
+    OPT_SECTION_SPARKLE = { enUS = "Sparkles", deDE = "Glitzern" },
+    OPT_SPARKLE_LOOT_LABEL = { enUS = "Quest items and loot sparkle", deDE = "Quest-Gegenstände und Beute glitzern" },
+    OPT_SPARKLE_LOOT_TOOLTIP = {
+        enUS = "Shows the sparkle effect on lootable quest items and loot. For this, Emberstone turns off the outline display (graphics settings) - otherwise the game does not show the effect. Your previous values are saved and restored when you turn this off. Not changed during combat, but right after.",
+        deDE = "Zeigt den Glitzereffekt auf aufhebbaren Quest-Gegenständen und Beute. Dafür schaltet Emberstone die Umriss-Darstellung (Grafikeinstellungen) aus - sonst zeigt das Spiel den Effekt nicht. Deine vorherigen Werte werden gespeichert und beim Ausschalten wiederhergestellt. Im Kampf wird nichts geändert, sondern direkt danach.",
+    },
+    OPT_SPARKLE_HERBS_LABEL = { enUS = "Herbs", deDE = "Kräuter" },
+    OPT_SPARKLE_HERBS_TOOLTIP = {
+        enUS = "Herbs sparkle when you get close: faint while not yet usable (usually out of range), bright in range, grey if your character lacks Herbalism.",
+        deDE = "Kräuter glitzern beim Näherkommen: schwach, solange sie noch nicht nutzbar sind (meist außer Reichweite), hell in Reichweite, grau, wenn deinem Charakter Kräuterkunde fehlt.",
+    },
+    OPT_SPARKLE_ORE_LABEL = { enUS = "Ore veins", deDE = "Erzadern" },
+    OPT_SPARKLE_ORE_TOOLTIP = {
+        enUS = "Ore veins sparkle when you get close: faint while not yet usable (usually out of range), bright in range, grey if your character lacks Mining.",
+        deDE = "Erzadern glitzern beim Näherkommen: schwach, solange sie noch nicht nutzbar sind (meist außer Reichweite), hell in Reichweite, grau, wenn deinem Charakter Bergbau fehlt.",
+    },
+    OPT_SPARKLE_QUESTOBJ_LABEL = { enUS = "Quest objects", deDE = "Questobjekte" },
+    OPT_SPARKLE_QUESTOBJ_TOOLTIP = {
+        enUS = "Objects that belong to one of your active quests sparkle when you get close.",
+        deDE = "Objekte, die zu einer deiner aktiven Quests gehören, glitzern beim Näherkommen.",
+    },
+    OPT_SPARKLE_SOFT_HINT = {
+        enUS = "Herbs, ore veins and quest objects use the game's soft targeting (interaction targeting). It only ever selects one object at a time, the one in front of you. Off during combat. Your previous settings are restored once all three are off.",
+        deDE = "Kräuter, Erzadern und Questobjekte nutzen das Soft Targeting des Spiels (Interaktions-Zielauswahl). Es wählt immer nur ein Objekt gleichzeitig aus, das vor dir. Im Kampf aus. Deine vorherigen Einstellungen kommen zurück, sobald alle drei aus sind.",
+    },
+    OPT_SPARKLE_RESTART_HINT = {
+        enUS = "Note: depending on the game client, switching the quest item sparkle off (restoring the outline display) may only take full effect after restarting the game.",
+        deDE = "Hinweis: Je nach Spielclient wirkt das Ausschalten des Quest-Gegenstand-Glitzerns (Umriss-Darstellung zurück) unter Umständen erst nach einem Neustart des Spiels vollständig.",
+    },
+    OPT_SPARKLE_CONFLICT = {
+        enUS = "%s is loaded. To avoid both addons changing the same settings, Emberstone does not turn on its sparkle functions.",
+        deDE = "%s ist geladen. Damit sich die Addons nicht gegenseitig die Einstellungen verstellen, schaltet Emberstone das Glitzern nicht ein.",
+    },
+    SPARKLE_CONFLICT = {
+        enUS = "Emberstone: %s is loaded - sparkle functions stay off.",
+        deDE = "Emberstone: %s ist geladen - das Glitzern bleibt aus.",
+    },
+    SPARKLE_AFTER_COMBAT = {
+        enUS = "Emberstone: In combat - the sparkle settings will be applied right after the fight.",
+        deDE = "Emberstone: Im Kampf - die Glitzer-Einstellungen werden direkt nach dem Kampf übernommen.",
+    },
+    SPARKLE_STATUS = {
+        enUS = "Emberstone sparkles: quest items/loot %s, herbs %s, ore veins %s, quest objects %s.",
+        deDE = "Emberstone-Glitzern: Quest-Gegenstände/Beute %s, Kräuter %s, Erzadern %s, Questobjekte %s.",
+    },
+    SPARKLE_DEBUG = {
+        enUS = "Emberstone sparkle test: object selected %s, cursor %s, type %s, not usable %s, profession missing %s.",
+        deDE = "Emberstone-Glitzer-Test: Objekt ausgewählt %s, Cursor %s, Art %s, nicht nutzbar %s, Beruf fehlt %s.",
+    },
+    SPARKLE_STATE_ON = { enUS = "on", deDE = "an" },
+    SPARKLE_STATE_OFF = { enUS = "off", deDE = "aus" },
+
     OPTIONS_IN_COMBAT = {
         enUS = "Emberstone: The options cannot be opened during combat. Please try again after the fight.",
         deDE = "Emberstone: Im Kampf lassen sich die Optionen nicht öffnen. Bitte nach dem Kampf erneut versuchen.",

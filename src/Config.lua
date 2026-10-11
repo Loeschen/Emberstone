@@ -52,6 +52,12 @@ Addon.Defaults = {
     minimapHide                   = false,
     minimapAngle                  = 240, -- Grad; Grindkeep sitzt bei 215, Loreclash bei 190
 
+    -- Glitzern (seit v1.13, siehe features/Sparkle.lua)
+    sparkleQuestLoot              = true,  -- Quest-Gegenstaende/Beute glitzern (Umriss-CVars)
+    sparkleHerbs                  = false, -- Kraeuter (Soft Targeting)
+    sparkleOre                    = false, -- Erzadern (Soft Targeting)
+    sparkleQuestObjects           = false, -- Questobjekte (Soft Targeting)
+
     -- Gildenweite Levelup-Benachrichtigungen - urspruenglich das eigenstaendige Addon "GrindDing"
     guildDingEnabled              = true,
     guildDingChat                 = true,
