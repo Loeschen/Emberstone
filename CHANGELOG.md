@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.13 (Beta)
+## 1.13 (12.10.2026)
 
 - Neu: Glitzern (Optionen → Emberstone → Glitzern).
   - Quest-Gegenstände und Beute glitzern (ab Werk an). Emberstone schaltet dafür die Umriss-Darstellung aus und setzt die Werte beim Login, nach Grafikänderungen und nach einem Grafik-Neustart erneut. Im Kampf wird nichts geändert, sondern direkt danach. Beim Ausschalten kommen die vorherigen Werte zurück.
@@ -13,7 +13,7 @@
 - Konsolenvariablen, die der Client nicht kennt, werden übersprungen.
 - Tests ergänzt; ein Test aus 1.12 hing von der Uhrzeit ab und ist jetzt stabil.
 
-## 1.12 (Beta)
+## 1.12
 
 - Neu: Minimap-Symbol. Linksklick öffnet die Optionen, Rechtsklick zeigt eine Test-Benachrichtigung, Ziehen verschiebt das Symbol.
 - Ausblendbar unter Optionen → Sonstiges („Minimap-Symbol anzeigen“) oder mit `/emberstone minimap`.
@@ -27,7 +27,7 @@
 - Das Minimap-Symbol wird über den Addon-Namen gefunden statt über einen festen Ordnerpfad; Fehler beim Aufbau landen im normalen Fehlerfenster statt still zu verschwinden.
 - Neu: automatische Tests (Lua 5.1 mit nachgebauter WoW-API) unter `tests/`.
 
-## 1.11 (Beta)
+## 1.11
 
 - Neu: Eigener AFK-Text. Wer dich anflüstert, während du AFK bist, bekommt einen zufälligen Spruch aus deiner Liste statt „AFK“ (`/emberstone afk`). Standardmäßig aus.
 - Der Listen-Editor der Glückwunsch-Sprüche wird jetzt auch für die AFK-Sprüche verwendet.

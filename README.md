@@ -3,7 +3,7 @@
 **Automatische Screenshots bei Meilensteinen und gildenweite Levelup-Glückwünsche (WoW Forever & Retail).**
 *Automatic milestone screenshots and guild-wide level-up congratulations (WoW Forever & Retail).*
 
-> Status: **Beta**. Fehler bitte über die [Issues](../../issues) melden.
+> Version **1.13**. Fehler bitte über die [Issues](../../issues) melden. / Please report bugs via [Issues](../../issues).
 
 ---
 

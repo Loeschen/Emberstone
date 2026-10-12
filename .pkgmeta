@@ -1,0 +1,7 @@
+# Paket-Einstellungen fuer den CurseForge-Packager: Ordnername und
+# Dateien, die nicht ins Addon-Paket gehoeren (nur fuer die Entwicklung).
+package-as: Emberstone
+
+ignore:
+  - tests
+  - .pkgmeta
