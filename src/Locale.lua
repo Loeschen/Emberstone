@@ -416,8 +416,8 @@ local STRINGS = {
     },
     OPT_SPARKLE_SKIN_LABEL = { enUS = "Skinning", deDE = "Kürschnern" },
     OPT_SPARKLE_SKIN_TOOLTIP = {
-        enUS = "Skinnable corpses glow when you get close (only skinnable ones, not corpses that can merely be looted - a corpse with loot glows after it has been looted). Faint while not yet usable (out of range or skill too low), bright in range, grey if your character lacks Skinning. The empty health bar of the corpse is hidden meanwhile. Off during combat.",
-        deDE = "Häutbare Leichen leuchten beim Näherkommen (nur häutbare, keine Leichen, die man nur plündern kann – eine Leiche mit Beute leuchtet, sobald sie geplündert ist). Schwach, solange sie noch nicht nutzbar sind (außer Reichweite oder Stufe zu niedrig), hell in Reichweite, grau, wenn deinem Charakter Kürschnerei fehlt. Der leere Lebensbalken der Leiche wird dabei ausgeblendet. Im Kampf aus.",
+        enUS = "While a skinnable corpse is selected for interaction, a claw glow pulses next to your character (to the right of the screen centre) - not on the corpse itself: corpses have no nameplate, so their position on screen is not available to addons. Only skinnable corpses (a corpse with loot counts once it has been looted). Faint while not yet usable (out of range or skill too low), bright in range, grey if your character lacks Skinning. Off during combat.",
+        deDE = "Solange eine häutbare Leiche zur Interaktion ausgewählt ist, pulsiert ein Krallen-Leuchten neben deinem Charakter (rechts von der Bildschirmmitte) – nicht an der Leiche selbst: Leichen haben keine Namensplakette, ihre Lage auf dem Bildschirm ist für Addons nicht abfragbar. Nur häutbare Leichen (eine Leiche mit Beute zählt, sobald sie geplündert ist). Schwach, solange noch nicht nutzbar (außer Reichweite oder Stufe zu niedrig), hell in Reichweite, grau, wenn deinem Charakter Kürschnerei fehlt. Im Kampf aus.",
     },
     OPT_SPARKLE_SOFT_HINT = {
         enUS = "Herbs, ore veins, quest objects and skinning use the game's soft targeting (interaction targeting). It only ever selects one object at a time, the one in front of you. Emberstone shows a soft glow there and hides Blizzard's own floating icon; if the game then shows no marker, the icon stays and the glow appears below it. Off during combat. Your previous settings are restored once all four are off.",
@@ -448,8 +448,12 @@ local STRINGS = {
         deDE = "Emberstone-Glitzer-Test: Plaketten-Einheit %s, GUID-Art %s, Spielobjekt %s, Cursor %s, Art %s, nicht nutzbar %s, Beruf fehlt %s, Plakette gefunden %s, sichtbare Plaketten %d.",
     },
     SPARKLE_DEBUG_SETTINGS = {
-        enUS = "Emberstone sparkle settings: herbs %s, ore veins %s, quest objects %s, skinning %s, corpse %s, health bar hidden %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, in combat %s.",
-        deDE = "Emberstone-Glitzer-Einstellungen: Kräuter %s, Erzadern %s, Questobjekte %s, Kürschnern %s, Leiche %s, Lebensbalken ausgeblendet %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, im Kampf %s.",
+        enUS = "Emberstone sparkle settings: herbs %s, ore veins %s, quest objects %s, skinning %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, in combat %s.",
+        deDE = "Emberstone-Glitzer-Einstellungen: Kräuter %s, Erzadern %s, Questobjekte %s, Kürschnern %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, im Kampf %s.",
+    },
+    SPARKLE_DEBUG_SOFT = {
+        enUS = "Emberstone softinteract (without plate): ID %s, dead %s, cursor %s, skinnable corpse %s, claw glow shown %s.",
+        deDE = "Emberstone-softinteract (ohne Plakette): ID %s, tot %s, Cursor %s, häutbare Leiche %s, Krallen-Leuchten sichtbar %s.",
     },
     SPARKLE_DEBUG_MODE = {
         enUS = "Emberstone sparkle display: %s, SoftTargetNameplateSize=%s, glow colour: %s.",

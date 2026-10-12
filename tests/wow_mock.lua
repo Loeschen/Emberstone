@@ -212,7 +212,9 @@ function M.install()
         if M.soft and (u == M.soft.token or (u == "softinteract" and not M.soft.noGuid)) then return M.soft.guid end
     end
     _G.UnitIsAFK = function() return false end
-    _G.UnitIsDead = function(u) return M.soft ~= nil and u == M.soft.token and M.soft.dead == true end
+    _G.UnitIsDead = function(u)
+        return M.soft ~= nil and (u == M.soft.token or u == "softinteract") and M.soft.dead == true
+    end
     _G.UnitClassification = function() return "normal" end
     _G.UnitFactionGroup = function() return "Alliance" end
     _G.IsInGuild = function() return true end

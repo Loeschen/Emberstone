@@ -19,9 +19,12 @@
 --   Objekt noch nicht benutzt werden kann (meist: ausser Reichweite), hell in
 --   Reichweite, grau, wenn dem Charakter der Beruf fehlt. Im Kampf aus.
 --   Einschraenkung: Soft Targeting waehlt immer nur EIN Objekt gleichzeitig.
---   Kuerschnern (ab Werk AUS): haeutbare Leichen (Cursor "...Skin...") - hier
---   ist das Ziel eine Einheit statt eines Spielobjekts; ihr 0-%-Lebensbalken
---   wird waehrend des Leuchtens ausgeblendet (siehe HideCorpseBar).
+--   Kuerschnern (ab Werk AUS): haeutbare Leichen. Auf Forever geprueft: Die
+--   Leiche ist "softinteract" (Creature-GUID, tot, Cursor
+--   "Crosshair_Skin_64"), bekommt aber KEINE Namensplakette - ihre Lage auf
+--   dem Bildschirm ist fuer Addons nicht abfragbar. Deshalb erscheint hier
+--   ein Krallen-Leuchten an fester Stelle neben dem eigenen Charakter
+--   (SkinHint weiter unten), nicht an der Leiche.
 --   Aussehen (v1.13, Variante B): ein grosses, weich pulsierendes Leuchten
 --   (additiv) an der Unterkante der Plakette, fuenf Farben zur Auswahl
 --   (Standard: Gold), Blizzards schwebendes Symbol ausgeblendet.
@@ -178,6 +181,7 @@ end
 
 local UpdateGlitter -- Vorwaertsdeklaration (Teil 2)
 local NoteBWorks   -- Vorwaertsdeklaration (Rueckfall-Waechter)
+local UpdateSkinHint -- Vorwaertsdeklaration (Kuerschnern)
 
 -- Rueckgabe: "conflict", "combat" (nachgeholt) oder "ok"
 function Addon:RefreshSparkle()
@@ -210,7 +214,9 @@ end
 -- Aus den Optionen: Einstellung setzen, sofort anwenden, im Kampf Hinweis
 function Addon:SetSparkleOption(key, value)
     self:SetSetting(key, value and true or false)
-    if self:RefreshSparkle() == "combat" then
+    local result = self:RefreshSparkle()
+    if UpdateSkinHint then UpdateSkinHint() end
+    if result == "combat" then
         print(L["SPARKLE_AFTER_COMBAT"])
     end
 end
@@ -341,17 +347,9 @@ function Addon:ClassifySoftInteract()
     info.unit = unit
     if not unit then return info end
     info.isObject = IsGameObjectUnit(unit)
+    if info.isObject == false then return info end -- NPCs/Leichen: siehe SkinHint
     info.kind, info.unable, info.cursor = KindOf(unit)
-    if info.isObject == false then
-        -- Einheiten (NPCs, Leichen): nur haeutbare Leichen. Normale
-        -- pluenderbare Leichen zeigen einen Pluender-Cursor und bleiben aus.
-        local okDead, dead = pcall(UnitIsDead or function() return false end, unit)
-        info.isCorpse = okDead and dead == true
-        if not (info.kind == "skin" and info.isCorpse) then info.kind = nil end
-    elseif info.kind == "skin" then
-        info.kind = nil -- Kuerschnern nur an Leichen
-    end
-    if info.kind == "skin" then info.noSkill = not HasProfession(SKILL_SKINNING) end
+    if info.kind == "skin" then info.kind = nil end -- Kuerschnern nur ueber SkinHint
     if info.kind == "herb" then info.noSkill = not HasProfession(SKILL_HERBALISM) end
     if info.kind == "ore" then info.noSkill = not HasProfession(SKILL_MINING) end
     return info
@@ -359,6 +357,28 @@ end
 
 local KIND_SETTING = { herb = "sparkleHerbs", ore = "sparkleOre", quest = "sparkleQuestObjects",
     skin = "sparkleSkinning" }
+
+-- Haeutbare Leiche, unabhaengig von einer Plakette (die Leichen nicht haben).
+-- Rueckgabe: { guid, dead, cursor, unable, noSkill, isSkin }
+function Addon:GetSoftCorpseInfo()
+    local info = {}
+    if UnitGUID then
+        local ok, guid = pcall(UnitGUID, UNIT)
+        if ok and type(guid) == "string" and not (issecretvalue and issecretvalue(guid)) then
+            info.guid = guid
+        end
+    end
+    if not info.guid then return info end
+    if UnitIsDead then
+        local ok, dead = pcall(UnitIsDead, UNIT)
+        info.dead = ok and dead == true
+    end
+    local kind, unable, cursor = KindOf(UNIT)
+    info.cursor, info.unable = cursor, unable
+    info.isSkin = kind == "skin" and info.dead == true and not info.guid:find("^GameObject")
+    if info.isSkin then info.noSkill = not HasProfession(SKILL_SKINNING) end
+    return info
+end
 
 -- "Hell, schwach, grau" - gilt fuer alle Farben. Die Farbe selbst kommt aus
 -- der gewaehlten Variante, "grau" ersetzt sie.
@@ -480,35 +500,6 @@ local function BuildGlitter()
     return f
 end
 
--- Lebensbalken einer Leichen-Plakette ausblenden (sonst steht dort ein
--- leerer 0-%-Balken). Blizzard entscheidet selbst, ob eine Plakette einen
--- Balken zeigt (UnitNameplateShowsWidgetsOnly) - eine Einstellung dafuer
--- gibt es nicht. Deshalb behutsam: nur die Deckkraft, nur an der Leiche mit
--- unserem Leuchten, nur ausserhalb des Kampfes, und sofort zurueck, sobald
--- das Leuchten wechselt, die Plakette verschwindet oder ein Kampf beginnt.
-local hiddenBar
-
-local function RestoreCorpseBar()
-    if hiddenBar then
-        pcall(hiddenBar.SetAlpha, hiddenBar, 1)
-        hiddenBar = nil
-    end
-end
-
-local function HideCorpseBar(plate)
-    local unitFrame = plate and plate.UnitFrame
-    local bar = type(unitFrame) == "table" and unitFrame.HealthBarsContainer or nil
-    if type(bar) ~= "table" or type(bar.SetAlpha) ~= "function" or bar == hiddenBar then return end
-    RestoreCorpseBar()
-    if InCombat() then return end
-    if bar.IsForbidden then
-        local okF, forbidden = pcall(bar.IsForbidden, bar)
-        if not okF or forbidden then return end
-    end
-    if pcall(bar.SetAlpha, bar, 0) then hiddenBar = bar end
-end
-Addon._sparkleHiddenBar = function() return hiddenBar end -- nur fuer Tests
-
 local function SoftPlate(unit)
     if not (unit and C_NamePlate and C_NamePlate.GetNamePlateForUnit) then return nil end
     local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
@@ -518,7 +509,6 @@ end
 
 UpdateGlitter = function()
     local function hide()
-        RestoreCorpseBar()
         if glitter then glitter:Hide() end
     end
     if not GROUPS.soft.wanted() or Addon:GetSparkleConflict() or InCombat() then return hide() end
@@ -528,8 +518,7 @@ UpdateGlitter = function()
     if not look then return hide() end
     local plate = SoftPlate(info.unit)
     if not plate then return hide() end
-    if info.isObject ~= false then NoteBWorks() end
-    if info.isCorpse then HideCorpseBar(plate) else RestoreCorpseBar() end
+    NoteBWorks()
 
     local f = BuildGlitter()
     if not f then return end
@@ -550,9 +539,73 @@ function Addon:SetSparkleStyle(id)
     if not style then return nil end
     self:SetSetting("sparkleStyle", style.id)
     UpdateGlitter()
+    UpdateSkinHint()
     if self.SparklePanel and self.SparklePanel.Sync then self.SparklePanel.Sync() end
     return style
 end
+
+-- ------------------------------------------------------------
+-- Kuerschnern: Krallen-Leuchten an fester Stelle neben dem Charakter
+-- ------------------------------------------------------------
+-- Leichen haben keine Plakette, deshalb kein Leuchten an der Leiche selbst.
+-- Solange "softinteract" eine tote, haeutbare Leiche ist, pulsiert rechts
+-- neben der Bildschirmmitte (dort steht bei normaler Kamera der eigene
+-- Charakter) ein Krallen-Leuchten in der gewaehlten Farbe. Unauffaellig:
+-- klein, rechts versetzt, hinter allen Fenstern, keine Toene.
+local SKIN_HINT_X, SKIN_HINT_Y = 120, -40   -- von der Bildschirmmitte aus
+local SKIN_HINT_SIZE = 56
+local skinHint
+
+local function BuildSkinHint()
+    if skinHint or not UIParent then return skinHint end
+    local f = CreateFrame("Frame", nil, UIParent)
+    f:SetSize(8, 8)
+    f:SetFrameStrata("BACKGROUND")
+    f:SetPoint("CENTER", UIParent, "CENTER", SKIN_HINT_X, SKIN_HINT_Y)
+    local halo = f:CreateTexture(nil, "BORDER")
+    halo:SetTexture(AssetPath("glow.tga"))
+    halo:SetBlendMode("ADD")
+    local main = f:CreateTexture(nil, "ARTWORK")
+    main:SetTexture(AssetPath("sparkle_claw.tga"))
+    main:SetBlendMode("ADD")
+    f.main, f.halo = main, halo
+    f.elapsed, f.sinceCheck = 0, 0
+    f:Hide()
+    f:SetScript("OnUpdate", function(self, elapsed)
+        self.elapsed = self.elapsed + elapsed
+        self.sinceCheck = self.sinceCheck + elapsed
+        if self.look then
+            Addon:DrawSparkle(self.main, self.halo, self.look, self.elapsed, self, SKIN_HINT_SIZE, 0)
+        end
+        if self.sinceCheck >= RECHECK then -- Reichweite aendert sich beim Laufen
+            self.sinceCheck = 0
+            UpdateSkinHint()
+        end
+    end)
+    skinHint = f
+    return f
+end
+
+UpdateSkinHint = function()
+    local function hide() if skinHint then skinHint:Hide() end end
+    if not Addon:GetSetting("sparkleSkinning") or Addon:GetSparkleConflict() or InCombat() then
+        return hide()
+    end
+    local corpse = Addon:GetSoftCorpseInfo()
+    if not corpse.isSkin then return hide() end
+    local look = corpse.noSkill and LOOKS.grey or (corpse.unable and LOOKS.dim or LOOKS.bright)
+    local f = BuildSkinHint()
+    if not f then return end
+    local style = Addon:GetSparkleStyle()
+    if f.look ~= look or f.style ~= style then
+        f.look, f.style = look, style
+        Addon:ApplySparkleColors(f.main, f.halo, style, look)
+        Addon:DrawSparkle(f.main, f.halo, look, f.elapsed, f, SKIN_HINT_SIZE, 0)
+    end
+    f:Show()
+end
+
+Addon._sparkleSkinHint = function() return skinHint end -- nur fuer Tests
 
 -- ------------------------------------------------------------
 -- Rueckfall von B auf C
@@ -705,9 +758,11 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
         Addon:RefreshSparkle()
     elseif event == "PLAYER_REGEN_ENABLED" then
         if pending then Addon:RefreshSparkle() else UpdateGlitter() end
+        UpdateSkinHint()
     elseif event == "PLAYER_REGEN_DISABLED" then
-        RestoreCorpseBar()
+        -- Feuert, bevor InCombatLockdown() greift: deshalb ausdruecklich aus
         if glitter then glitter:Hide() end
+        if skinHint then skinHint:Hide() end
     elseif event == "CVAR_UPDATE" then
         if applying or type(arg1) ~= "string" then return end
         if issecretvalue and (issecretvalue(arg1) or issecretvalue(arg2)) then return end
@@ -733,10 +788,12 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
             plateTokens[arg1] = true
         elseif event == "NAME_PLATE_UNIT_REMOVED" and type(arg1) == "string" then
             plateTokens[arg1] = nil
-            RestoreCorpseBar() -- Plakette wird wiederverwendet: Balken sicher zurueck
         end
         UpdateGlitter()
-        if event == "PLAYER_SOFT_INTERACT_CHANGED" then CheckPlateLater() end
+        if event == "PLAYER_SOFT_INTERACT_CHANGED" then
+            UpdateSkinHint()
+            CheckPlateLater()
+        end
     end
 end)
 
@@ -776,8 +833,12 @@ function Addon:HandleSparkleCommand(rest)
         print(string.format(L["SPARKLE_DEBUG_SETTINGS"],
             OnOff(self:GetSetting("sparkleHerbs")), OnOff(self:GetSetting("sparkleOre")),
             OnOff(self:GetSetting("sparkleQuestObjects")), OnOff(self:GetSetting("sparkleSkinning")),
-            tostring(info.isCorpse), tostring(hiddenBar ~= nil), tostring(CVarGet("softTargetInteract")),
+            tostring(CVarGet("softTargetInteract")),
             tostring(CVarGet("SoftTargetIconGameObject")), tostring(InCombat())))
+        local corpse = self:GetSoftCorpseInfo()
+        print(string.format(L["SPARKLE_DEBUG_SOFT"],
+            tostring(corpse.guid), tostring(corpse.dead), tostring(corpse.cursor),
+            tostring(corpse.isSkin == true), tostring(skinHint ~= nil and skinHint:IsShown())))
         print(string.format(L["SPARKLE_DEBUG_MODE"],
             self:GetSparkleMode() == "B" and L["SPARKLE_MODE_B"] or L["SPARKLE_MODE_C"],
             tostring(CVarGet("SoftTargetNameplateSize")),

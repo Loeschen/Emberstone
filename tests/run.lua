@@ -947,127 +947,158 @@ for _, profile in ipairs({ "retail", "forever" }) do
         assert(has(M.printed, os.date("%H:%M", os.time() + 600):sub(1, 2)), "nächster Versuch fehlt")
     end)
 
-    -- -------- Kuerschnern (Leichen sind Einheiten, keine Spielobjekte) --------
-    local SKIN = "Cursor Crosshair_Skin_64"          -- Annahme nach dem Muster von GatherHerbs
-    local function corpse(A, cursor, extra)
-        local g = soft(A, cursor, { guid = "Creature-0-1-2-3-1553-0001", dead = true })
+    -- -------- Kuerschnern --------
+    -- So auf Forever beobachtet (Grosser Nachtsauger, Tirisfal): softinteract ist
+    -- die Leiche (Creature-GUID), tot, Cursor "Cursor Crosshair_Skin_64" - aber
+    -- es gibt KEINE Namensplakette (GetNamePlates leer).
+    local SKIN = "Cursor Crosshair_Skin_64"
+    local function corpse(cursor, extra)
+        M.soft = { guid = "Creature-0-4621-0-175377-1553-00004D5D9C", dead = true, cursor = cursor or SKIN }
         for k, v in pairs(extra or {}) do M.soft[k] = v end
-        if rawget(M.soft.plate, "UnitFrame") == nil then
-            rawset(M.soft.plate, "UnitFrame", { HealthBarsContainer = M.NewFrame("Frame") })
-        end
         M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "x")
-        return A._sparkleGlitter(), rawget(M.soft.plate, "UnitFrame").HealthBarsContainer
     end
+    local function hint(A) return A._sparkleSkinHint() end
+    local function shown(A) local h = hint(A); return h ~= nil and h:IsShown() end
 
-    test("Kürschnern: ab Werk aus, häutbare Leiche leuchtet nur mit Schalter", function()
+    test("Kürschnern: ab Werk aus; mit Schalter Krallen-Leuchten neben dem Charakter, ohne Plakette", function()
         local A = boot(profile, locale)
         eq(A:GetSetting("sparkleSkinning"), false, "ab Werk aus")
-        A:SetSparkleOption("sparkleHerbs", true) -- Soft Targeting an, Kuerschnern aber aus
+        A:SetSparkleOption("sparkleHerbs", true)
         M.profs = { 393 }
-        local g = corpse(A, SKIN)
-        assert(not g or not g:IsShown(), "leuchtet ohne Schalter")
+        corpse()
+        assert(not shown(A), "leuchtet ohne Schalter")
         A:SetSparkleOption("sparkleSkinning", true)
-        g = corpse(A, SKIN)
-        assert(g and g:IsShown(), "häutbare Leiche leuchtet nicht")
-        eq(g.look.name, "bright")
-        eq(g.main._color[1], A:GetSparkleStyle().color[1], "Farbe nach Spielerwahl")
+        corpse()
+        assert(shown(A), "Krallen-Leuchten fehlt")
+        local h = hint(A)
+        local pt = h._points[#h._points]
+        eq(pt[1], "CENTER"); eq(pt[2], UIParent, "an fester Stelle (UIParent)"); eq(pt[3], "CENTER")
+        assert(pt[4] > 0, "rechts neben der Mitte")
+        eq(h.main._file, "Interface\\AddOns\\Emberstone\\Assets\\sparkle_claw.tga", "Krallen-Grafik")
+        eq(h.main._blend, "ADD", "additiv")
+        eq(h.main._color[1], A:GetSparkleStyle().color[1], "Glitzerfarbe")
+        local g = A._sparkleGlitter()
+        assert(not g or not g:IsShown(), "kein Leuchten an einer Plakette")
+        local minW, maxW = 1e9, 0
+        for _ = 1, 40 do h._scripts.OnUpdate(h, 0.05); minW = math.min(minW, h.main._w); maxW = math.max(maxW, h.main._w) end
+        assert(maxW - minW > 3, "pulsiert nicht")
+        assert(maxW < 80, "unauffällig klein: " .. maxW)
     end)
 
-    test("Kürschnern: Soft Targeting auch nur mit Kürschnern-Schalter an", function()
+    test("Kürschnern: Farbwahl wirkt sofort auch auf das Krallen-Leuchten", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleSkinning", true)
-        cvarsAre(SOFT, "Soft an")
+        M.profs = { 393 }
+        corpse()
+        A:SetSparkleStyle("violet")
+        eq(hint(A).main._color[1], A:GetSparkleStyle().color[1])
+    end)
+
+    test("Kürschnern: verschwindet sofort, wenn die Leiche nicht mehr ausgewählt ist", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
+        M.profs = { 393 }
+        corpse()
+        assert(shown(A))
+        M.soft = nil
+        M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "x", "")
+        eq(shown(A), false, "nach Abwahl")
+        corpse()
         A:SetSparkleOption("sparkleSkinning", false)
-        cvarsAre(SOFT_OLD, "alles zurück")
+        eq(shown(A), false, "Schalter aus")
     end)
 
-    test("Kürschnern: normale plünderbare Leiche und lebende NPCs leuchten nicht", function()
+    test("Kürschnern: im Kampf aus (schon beim Kampfbeginn), danach wieder da", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleSkinning", true)
-        A:SetSparkleOption("sparkleQuestObjects", true)
-        local g = corpse(A, "Cursor Crosshair_LootAll_64")
-        assert(not g or not g:IsShown(), "plünderbare Leiche leuchtet")
-        g = corpse(A, SKIN, { dead = false })
-        assert(not g or not g:IsShown(), "lebender NPC mit Skin-Cursor leuchtet")
-        g = corpse(A, "Cursor Crosshair_Quest_64", { quest = true })
-        assert(not g or not g:IsShown(), "Quest-Leiche als Questobjekt")
+        M.profs = { 393 }
+        corpse()
+        M.FireEvent("PLAYER_REGEN_DISABLED") -- feuert vor der Kampfsperre
+        eq(shown(A), false, "bei Kampfbeginn")
+        M.inCombat = true
+        corpse()
+        eq(shown(A), false, "im Kampf")
+        M.inCombat = false
+        M.FireEvent("PLAYER_REGEN_ENABLED")
+        eq(shown(A), true, "nach dem Kampf")
     end)
 
     test("Kürschnern: hell, schwach (außer Reichweite/Stufe zu niedrig), grau ohne Kürschnerei", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleSkinning", true)
         M.profs = { 393 }
-        local g = corpse(A, SKIN)
-        eq(g.look.name, "bright", "hell")
-        corpse(A, "Cursor Crosshair_UnableSkin_64")
-        eq(g.look.name, "dim", "schwach")
+        corpse()
+        eq(hint(A).look.name, "bright", "hell")
+        corpse("Cursor Crosshair_UnableSkin_64")
+        eq(hint(A).look.name, "dim", "schwach")
         M.profs = { 182, 186 }
-        corpse(A, SKIN)
-        eq(g.look.name, "grey", "grau ohne Kürschnerei")
+        corpse()
+        eq(hint(A).look.name, "grey", "grau ohne Kürschnerei")
+        eq(hint(A).main._desat, true)
+        -- Reichweite ändert sich ohne Zielwechsel: regelmäßige Neubewertung
+        M.profs = { 393 }
+        M.soft.cursor = "Cursor Crosshair_UnableSkin_64"
+        hint(A)._scripts.OnUpdate(hint(A), 0.35)
+        eq(hint(A).look.name, "dim", "neu bewertet")
     end)
 
-    test("Kürschnern: 0-%-Lebensbalken der Leiche ausgeblendet und sicher zurückgesetzt", function()
+    test("Kürschnern: plünderbare Leiche, lebender NPC und Spielobjekt zeigen nichts", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleSkinning", true)
-        M.profs = { 393 }
-        local g, bar = corpse(A, SKIN)
-        eq(bar._alpha, 0, "Balken ausgeblendet")
-        -- Kampf beginnt: Leuchten aus, Balken zurück
-        M.inCombat = true
-        M.FireEvent("PLAYER_REGEN_DISABLED")
-        eq(bar._alpha, 1, "Balken im Kampf zurück")
-        eq(g:IsShown(), false, "Leuchten im Kampf aus")
-        M.inCombat = false
-        M.FireEvent("PLAYER_REGEN_ENABLED")
-        eq(bar._alpha, 0, "nach Kampf wieder ausgeblendet")
-        -- Plakette verschwindet (Leiche weg, Plakette wird wiederverwendet): Balken zurück
-        M.soft = nil
-        M.FireEvent("NAME_PLATE_UNIT_REMOVED", "nameplate1")
-        eq(bar._alpha, 1, "Plakette entfernt")
-        -- Kraut statt Leiche: kein Balken angefasst
+        corpse("Cursor Crosshair_LootAll_64")
+        assert(not shown(A), "plünderbare Leiche")
+        corpse(SKIN, { dead = false })
+        assert(not shown(A), "lebender NPC")
+        corpse(SKIN, { guid = "GameObject-0-1-2-3-1617-0001" })
+        assert(not shown(A), "Spielobjekt mit Skin-Cursor")
+    end)
+
+    test("Kürschnern: bei Vertraeglichkeits-Konflikt aus", function()
+        local A = boot(profile, locale, function() M.loadedAddons.Lueur = true end)
+        A:SetSparkleOption("sparkleSkinning", true)
+        corpse()
+        assert(not shown(A))
+    end)
+
+    test("Kürschnern: Leichen lösen nie den Rückfall auf C aus", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
         A:SetSparkleOption("sparkleHerbs", true)
-        local _, bar2 = corpse(A, SKIN)
-        soft(A, "Cursor Crosshair_GatherHerbs_64")
-        eq(bar2._alpha, 1, "nach Wechsel zum Kraut zurück")
-        eq(A._sparkleHiddenBar(), nil)
-    end)
-
-    test("Kürschnern: verbotene Plakette wird nicht angefasst", function()
-        local A = boot(profile, locale)
-        A:SetSparkleOption("sparkleSkinning", true)
-        M.profs = { 393 }
-        local bar = M.NewFrame("Frame")
-        bar.IsForbidden = function() return true end
-        local g = corpse(A, SKIN, { plate = (function()
-            local p = M.NewFrame("Frame"); p.GetUnit = function() return "nameplate1" end
-            p.UnitFrame = { HealthBarsContainer = bar }; return p end)() })
-        eq(bar._alpha, nil, "nicht angefasst")
-    end)
-
-    test("Kürschnern: Leichen lösen keinen Rückfall auf C aus", function()
-        local A = boot(profile, locale)
-        A:SetSparkleOption("sparkleSkinning", true)
         M.advance(11)
-        for n = 1, 4 do
+        for n = 1, 5 do
             M.soft = { guid = "Creature-0-1-2-3-1553-000" .. n, cursor = SKIN, dead = true }
             M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "x")
             M.advance(5)
         end
+        eq(A:GetSparkleFallbackState().failCount, 0, "keine Fehlversuche")
         eq(A:GetSparkleMode(), "B")
     end)
 
-    test("Kürschnern: Debug und Status nennen Kürschnern, Optionen haben den Schalter", function()
+    test("Kürschnern: Blizzards Plaketten werden nicht angefasst (Lebensbalken-Code entfernt)", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleSkinning", true)
         M.profs = { 393 }
-        corpse(A, SKIN)
+        -- selbst wenn es eine Plakette gäbe: kein Eingriff mehr
+        local bar = M.NewFrame("Frame")
+        local plate = M.NewFrame("Frame"); plate.GetUnit = function() return "nameplate1" end
+        rawset(plate, "UnitFrame", { HealthBarsContainer = bar })
+        corpse(SKIN, { token = "nameplate1", plate = plate })
+        M.FireEvent("NAME_PLATE_UNIT_ADDED", "nameplate1")
+        eq(bar._alpha, nil, "Lebensbalken unberührt")
+        eq(A._sparkleHiddenBar, nil, "Code entfernt")
+    end)
+
+    test("Kürschnern: Debug zeigt softinteract-ID, tot und Cursor ohne Plakette", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
+        M.profs = { 393 }
+        corpse()
         SlashCmdList.EMBERSTONE("sparkle debug")
-        local found = false
-        for _, l in ipairs(M.printed) do
-            if l:lower():find(A.L["OPT_SPARKLE_SKIN_LABEL"]:lower(), 1, true) then found = true end
-        end
-        assert(found, "Kürschnern fehlt im Debug")
-        assert(has(M.printed, "skin"), "Art skin fehlt")
+        assert(has(M.printed, "Creature-0-4621-0-175377-1553-00004D5D9C"), "ID fehlt")
+        assert(has(M.printed, SKIN), "Cursor fehlt")
+        local line
+        for _, l in ipairs(M.printed) do if l:find("Creature-0-4621", 1, true) then line = l end end
+        assert(line:find("true", 1, true), "tot/häutbar fehlt")
         SlashCmdList.EMBERSTONE("sparkle")
         local status = string.format(A.L["SPARKLE_STATUS"], A.L["SPARKLE_STATE_ON"], A.L["SPARKLE_STATE_OFF"],
             A.L["SPARKLE_STATE_OFF"], A.L["SPARKLE_STATE_OFF"], A.L["SPARKLE_STATE_ON"])
