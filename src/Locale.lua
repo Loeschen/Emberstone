@@ -415,8 +415,8 @@ local STRINGS = {
         deDE = "Objekte, die zu einer deiner aktiven Quests gehören, glitzern beim Näherkommen.",
     },
     OPT_SPARKLE_SOFT_HINT = {
-        enUS = "Herbs, ore veins and quest objects use the game's soft targeting (interaction targeting). It only ever selects one object at a time, the one in front of you. Off during combat. Your previous settings are restored once all three are off.",
-        deDE = "Kräuter, Erzadern und Questobjekte nutzen das Soft Targeting des Spiels (Interaktions-Zielauswahl). Es wählt immer nur ein Objekt gleichzeitig aus, das vor dir. Im Kampf aus. Deine vorherigen Einstellungen kommen zurück, sobald alle drei aus sind.",
+        enUS = "Herbs, ore veins and quest objects use the game's soft targeting (interaction targeting). It only ever selects one object at a time, the one in front of you. Emberstone shows golden sparkles there and hides Blizzard's own floating icon; if the game then shows no marker, the icon stays and the sparkles appear below it. Off during combat. Your previous settings are restored once all three are off.",
+        deDE = "Kräuter, Erzadern und Questobjekte nutzen das Soft Targeting des Spiels (Interaktions-Zielauswahl). Es wählt immer nur ein Objekt gleichzeitig aus, das vor dir. Emberstone zeigt dort goldene Funken und blendet Blizzards eigenes schwebendes Symbol aus; zeigt das Spiel dann keine Markierung, bleibt das Symbol und die Funken erscheinen darunter. Im Kampf aus. Deine vorherigen Einstellungen kommen zurück, sobald alle drei aus sind.",
     },
     OPT_SPARKLE_RESTART_HINT = {
         enUS = "Note: depending on the game client, switching the quest item sparkle off (restoring the outline display) may only take full effect after restarting the game.",
@@ -445,6 +445,20 @@ local STRINGS = {
     SPARKLE_DEBUG_SETTINGS = {
         enUS = "Emberstone sparkle settings: herbs %s, ore veins %s, quest objects %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, in combat %s.",
         deDE = "Emberstone-Glitzer-Einstellungen: Kräuter %s, Erzadern %s, Questobjekte %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, im Kampf %s.",
+    },
+    SPARKLE_DEBUG_MODE = {
+        enUS = "Emberstone sparkle display: %s, SoftTargetNameplateSize=%s.",
+        deDE = "Emberstone-Glitzer-Darstellung: %s, SoftTargetNameplateSize=%s.",
+    },
+    SPARKLE_MODE_B = { enUS = "B (sparkles only, Blizzard icon hidden)", deDE = "B (nur Funken, Blizzards Symbol ausgeblendet)" },
+    SPARKLE_MODE_C = { enUS = "C (fallback: Blizzard icon stays, sparkles below)", deDE = "C (Rückfall: Blizzards Symbol bleibt, Funken darunter)" },
+    SPARKLE_FALLBACK_NOTICE = {
+        enUS = "Emberstone: Without Blizzard's icon the game shows no marker for the object, so the icon stays visible and the sparkles appear below it. Try again with /emberstone sparkle retry",
+        deDE = "Emberstone: Ohne Blizzards Symbol zeigt das Spiel keine Markierung für das Objekt an. Das Symbol bleibt deshalb sichtbar, die Funken erscheinen darunter. Erneut versuchen mit /emberstone sparkle retry",
+    },
+    SPARKLE_RETRY_DONE = {
+        enUS = "Emberstone: Trying again to hide Blizzard's icon.",
+        deDE = "Emberstone: Neuer Versuch, Blizzards Symbol auszublenden.",
     },
     SPARKLE_STATE_ON = { enUS = "on", deDE = "an" },
     SPARKLE_STATE_OFF = { enUS = "off", deDE = "aus" },

@@ -8,6 +8,8 @@
   - Ist ForeverLootSparkles oder Lueur geladen, bleibt das Glitzern aus; die Optionen zeigen einen Hinweis.
 - Neu: `/emberstone sparkle` (Status) und `/emberstone sparkle debug` (Erkennung am ausgewählten Objekt).
 - Behoben (Forever-Test): Kräuter und Erzadern wurden nicht erkannt, weil das Spiel ausgewählte Spielobjekte nicht als „vorhanden“ meldet. Emberstone findet das Objekt jetzt wie Blizzards eigene Anzeige über dessen Namensplakette. `/emberstone sparkle debug` zeigt dazu mehr Angaben.
+- Neues Aussehen (Forever-Test): 4–5 goldene Funken mit weichem Schimmer an der Unterseite der Markierung statt eines kleinen grünen Sterns. Einheitlich Gold für Kräuter, Erz und Questobjekte; hell, schwach und grau über Anzahl und Stärke der Funken.
+- Blizzards schwebendes Symbol wird ausgeblendet (`SoftTargetNameplateSize` 0, alter Wert gespeichert). Legt das Spiel ohne Symbol keine Markierung an, stellt Emberstone den alten Wert selbst wieder her, zeigt die Funken unter dem Symbol und meldet das einmal im Chat. `/emberstone sparkle debug` zeigt, welche Darstellung aktiv ist, `/emberstone sparkle retry` versucht es erneut.
 - Konsolenvariablen, die der Client nicht kennt, werden übersprungen.
 - Tests ergänzt; ein Test aus 1.12 hing von der Uhrzeit ab und ist jetzt stabil.
 

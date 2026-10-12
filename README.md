@@ -17,7 +17,7 @@
 - **Minimap-Symbol (neu in 1.12):** Linksklick öffnet die Einstellungen, Rechtsklick zeigt eine Test-Benachrichtigung, Ziehen verschiebt das Symbol am Rand der Minimap. Ausblendbar unter Optionen → Sonstiges („Minimap-Symbol anzeigen“) oder per Befehl. Emberstone steht außerdem im Addon-Menü an der Minimap.
 - **Glitzern (neu in 1.13):** Optionen → Emberstone → Glitzern.
   - *Quest-Gegenstände und Beute glitzern* (ab Werk an): Dafür schaltet Emberstone die Umriss-Darstellung in den Grafikeinstellungen aus, sonst zeigt das Spiel den Glitzereffekt nicht. Deine vorherigen Werte werden gespeichert und beim Ausschalten wiederhergestellt. Im Kampf wird nichts geändert, sondern direkt danach. Je nach Client wirkt das Ausschalten unter Umständen erst nach einem Neustart des Spiels vollständig.
-  - *Kräuter*, *Erzadern* und *Questobjekte* (ab Werk aus, einzeln schaltbar): glitzern beim Näherkommen – schwach, solange sie noch nicht nutzbar sind (meist außer Reichweite), hell in Reichweite, grau, wenn deinem Charakter der Beruf fehlt. Nutzt das Soft Targeting des Spiels und markiert daher immer nur ein Objekt gleichzeitig. Im Kampf aus.
+  - *Kräuter*, *Erzadern* und *Questobjekte* (ab Werk aus, einzeln schaltbar): glitzern beim Näherkommen – schwach, solange sie noch nicht nutzbar sind (meist außer Reichweite), hell in Reichweite, grau, wenn deinem Charakter der Beruf fehlt. Dezente goldene Funken mit weichem Schimmer; Blizzards schwebendes Symbol wird dafür ausgeblendet (klappt das nicht, bleibt es sichtbar und die Funken erscheinen darunter). Nutzt das Soft Targeting des Spiels und markiert daher immer nur ein Objekt gleichzeitig. Im Kampf aus.
   - Ist *ForeverLootSparkles* oder *Lueur* geladen, schaltet Emberstone das Glitzern nicht ein, damit sich die Addons nicht gegenseitig die Einstellungen verstellen.
   - Wichtig: Schalte das Glitzern **in Emberstone aus, bevor du Emberstone deinstallierst** – sonst bleiben die geänderten Grafik- und Zielauswahl-Einstellungen bestehen.
 
@@ -32,7 +32,7 @@ Den Ordner nach `World of Warcraft/_retail_/Interface/AddOns/` kopieren. **Der O
 - `/emberstone afk on|off|edit|add|list|test` – eigener AFK-Text.
 - `/emberstone gzmsg …` – Glückwunsch-Sprüche.
 - `/emberstone test` – Test der Levelup-Benachrichtigung (nur bei dir sichtbar).
-- `/emberstone sparkle` – zeigt, welche Glitzer-Funktionen an sind; `/emberstone sparkle debug` zeigt, was Emberstone am gerade ausgewählten Objekt erkennt (für Fehlerberichte).
+- `/emberstone sparkle` – zeigt, welche Glitzer-Funktionen an sind; `/emberstone sparkle debug` zeigt, was Emberstone am gerade ausgewählten Objekt erkennt (für Fehlerberichte); `/emberstone sparkle retry` versucht erneut, Blizzards Symbol auszublenden.
 
 ### Hinweis zu WoW Forever (Beta)
 
@@ -50,7 +50,7 @@ Im aktuellen Forever-Beta-Client lädt ein `/reload` manchmal den vorherigen Sta
 - **Minimap button (new in 1.12):** left click opens the settings, right click shows a test notification, drag to move the button around the minimap. Can be hidden under Options → Miscellaneous ("Show minimap button") or with a command. Emberstone is also listed in the addon menu at the minimap.
 - **Sparkles (new in 1.13):** Options → Emberstone → Sparkles.
   - *Quest items and loot sparkle* (on by default): for this, Emberstone turns off the outline display in the graphics settings, otherwise the game does not show the sparkle effect. Your previous values are saved and restored when you turn it off. Nothing is changed during combat, but right after. Depending on the client, turning it off may only take full effect after restarting the game.
-  - *Herbs*, *Ore veins* and *Quest objects* (off by default, separate switches): sparkle when you get close – faint while not yet usable (usually out of range), bright in range, grey if your character lacks the profession. Uses the game's soft targeting and therefore only marks one object at a time. Off during combat.
+  - *Herbs*, *Ore veins* and *Quest objects* (off by default, separate switches): sparkle when you get close – faint while not yet usable (usually out of range), bright in range, grey if your character lacks the profession. Subtle golden sparkles with a soft glow; Blizzard's floating icon is hidden for this (if that does not work, it stays visible and the sparkles appear below it). Uses the game's soft targeting and therefore only marks one object at a time. Off during combat.
   - If *ForeverLootSparkles* or *Lueur* is loaded, Emberstone does not turn on its sparkles, so the addons don't change each other's settings.
   - Important: **turn the sparkles off in Emberstone before uninstalling Emberstone** – otherwise the changed graphics and targeting settings stay as they are.
 
@@ -65,7 +65,7 @@ Copy the folder to `World of Warcraft/_retail_/Interface/AddOns/`. **The folder 
 - `/emberstone afk on|off|edit|add|list|test` – custom AFK text.
 - `/emberstone gzmsg …` – congratulation messages.
 - `/emberstone test` – test the level-up notification (only visible to you).
-- `/emberstone sparkle` – shows which sparkle functions are on; `/emberstone sparkle debug` shows what Emberstone detects on the currently selected object (for bug reports).
+- `/emberstone sparkle` – shows which sparkle functions are on; `/emberstone sparkle debug` shows what Emberstone detects on the currently selected object (for bug reports); `/emberstone sparkle retry` tries again to hide Blizzard's icon.
 
 ---
 

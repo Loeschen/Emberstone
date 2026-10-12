@@ -404,8 +404,10 @@ for _, profile in ipairs({ "retail", "forever" }) do
         raidGraphicsOutlineMode = "0", RAIDOutlineEngineMode = "0" }
     local LOOT_OLD = { outlineModeShowLootEffectWhenDisabled = "0", graphicsOutlineMode = "2", OutlineEngineMode = "1",
         raidGraphicsOutlineMode = "1", RAIDOutlineEngineMode = "1" }
-    local SOFT = { softTargetInteract = "3", SoftTargetIconGameObject = "1", SoftTargetIconInteract = "1" }
-    local SOFT_OLD = { softTargetInteract = "1", SoftTargetIconGameObject = "0", SoftTargetIconInteract = "1" }
+    local SOFT = { softTargetInteract = "3", SoftTargetIconGameObject = "1", SoftTargetIconInteract = "1",
+        SoftTargetNameplateSize = "0" }
+    local SOFT_OLD = { softTargetInteract = "1", SoftTargetIconGameObject = "0", SoftTargetIconInteract = "1",
+        SoftTargetNameplateSize = "24" }
     local function cvarsAre(want, what)
         for k, v in pairs(want) do eq(M.cvars[k], v, (what or "") .. " " .. k) end
     end
@@ -541,13 +543,17 @@ for _, profile in ipairs({ "retail", "forever" }) do
         M.profs = { 182 }
         local g = soft(A, "Interface\\Cursor\\GatherHerbs")
         assert(g and g:IsShown(), "nicht sichtbar")
-        eq(g.baseAlpha, 1.0, "hell")
-        eq(g.tex._desat, false, "nicht grau")
+        eq(g.look.name, "bright", "hell")
+        eq(g.look.count, 5, "5 Funken")
+        eq(g.points[1]._desat, false, "nicht grau")
+        eq(g.points[1]._color[1], 1.0, "Gold")
         soft(A, "Interface\\Cursor\\UnableGatherHerbs")
-        eq(g.baseAlpha, 0.35, "schwach")
+        eq(g.look.name, "dim", "schwach")
+        assert(g.look.count < 5 and g.look.strength < 1, "schwach = weniger, blassere Funken")
         M.profs = { 186 }
         soft(A, "Interface\\Cursor\\GatherHerbs")
-        eq(g.tex._desat, true, "grau ohne Kräuterkunde")
+        eq(g.look.name, "grey", "grau ohne Kräuterkunde")
+        eq(g.points[1]._desat, true, "entsättigt")
     end)
 
     test("Glitzern: Erz nur mit Erz-Schalter", function()
@@ -559,7 +565,8 @@ for _, profile in ipairs({ "retail", "forever" }) do
         A:SetSparkleOption("sparkleOre", true)
         g = soft(A, "Interface\\Cursor\\Mine")
         assert(g and g:IsShown(), "Erz glitzert nicht")
-        eq(g.tex._desat, false)
+        eq(g.look.name, "bright")
+        eq(g.points[1]._color[2], 0.82, "Erz ebenfalls Gold")
     end)
 
     test("Glitzern: Questobjekt über Quest-Zuordnung, im Kampf aus", function()
@@ -636,7 +643,136 @@ for _, profile in ipairs({ "retail", "forever" }) do
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleHerbs", true)
         local g = soft(A, "Interface\\Cursor\\GatherHerbs")
-        eq(g.tex._file, "Interface\\AddOns\\Emberstone\\Assets\\sparkle.tga")
+        eq(g.points[1]._file, "Interface\\AddOns\\Emberstone\\Assets\\sparkle.tga")
+        eq(g.shimmer._file, "Interface\\AddOns\\Emberstone\\Assets\\glow.tga")
+    end)
+
+    -- -------- Variante B mit Rueckfall C --------
+    test("Glitzern B: Funken an der Unterkante der Plakette, höchstens 5, funkeln", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        M.profs = { 182 }
+        local g = soft(A, "Interface\\Cursor\\GatherHerbs")
+        local pt = g._points[#g._points]
+        eq(pt[1], "CENTER"); eq(pt[2], M.soft.plate, "an der Plakette"); eq(pt[3], "BOTTOM", "Unterkante")
+        eq(#g.points, 5, "Anzahl Funken")
+        local seen = 0
+        for _ = 1, 60 do
+            g._scripts.OnUpdate(g, 0.05)
+            for _, p in ipairs(g.points) do if (p._alpha or 0) > 0.3 then seen = seen + 1 end end
+        end
+        assert(seen > 0, "Funken leuchten nie auf")
+    end)
+
+    test("Glitzern B: Symbol-Größe 0, alter Wert gespeichert und beim Ausschalten zurück", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleOre", true)
+        eq(M.cvars.SoftTargetNameplateSize, "0")
+        eq(A:GetSparkleMode(), "B")
+        A:SetSparkleOption("sparkleOre", false)
+        eq(M.cvars.SoftTargetNameplateSize, "24", "zurück")
+    end)
+
+    test("Glitzern B: Plakette kommt -> kein Rückfall", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        soft(A, "Interface\\Cursor\\GatherHerbs")
+        M.advance(5)
+        eq(A:GetSparkleMode(), "B")
+        eq(M.cvars.SoftTargetNameplateSize, "0")
+    end)
+
+    test("Glitzern B: Plakette kommt etwas später (1 s) -> kein Rückfall", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        M.soft = { guid = "GameObject-0-1-2-3-1617-0001" } -- schon ausgewaehlt, noch ohne Plakette
+        M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "x")
+        M.advance(1)
+        soft(A, "Interface\\Cursor\\GatherHerbs")
+        M.advance(5)
+        eq(A:GetSparkleMode(), "B")
+    end)
+
+    local function objectWithoutPlate()
+        M.soft = { guid = "GameObject-0-1-2-3-1617-0001" }
+        M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "x")
+    end
+
+    test("Glitzern Rückfall C: Objekt ausgewählt, aber keine Plakette -> alter Wert zurück, Hinweis", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        objectWithoutPlate()
+        M.advance(1.5)
+        eq(A:GetSparkleMode(), "B", "noch nicht nach 1,5 s")
+        M.advance(1)
+        eq(A:GetSparkleMode(), "C", "nach 2 s")
+        eq(M.cvars.SoftTargetNameplateSize, "24", "alter Wert")
+        assert(has(M.printed, A.L["SPARKLE_FALLBACK_NOTICE"]), "Hinweis fehlt")
+        cvarsAre({ softTargetInteract = "3", SoftTargetIconGameObject = "1" }, "Rest bleibt")
+        -- Jetzt mit Symbol: Plakette da, Funken erscheinen (wie C)
+        local g = soft(A, "Interface\\Cursor\\GatherHerbs")
+        assert(g and g:IsShown(), "Funken in C")
+        -- Ausschalten: nichts mehr zu tun, Wert bleibt der des Spielers
+        A:SetSparkleOption("sparkleHerbs", false)
+        eq(M.cvars.SoftTargetNameplateSize, "24")
+        cvarsAre(SOFT_OLD, "alles zurück")
+    end)
+
+    test("Glitzern Rückfall C: bleibt nach Neustart, CVAR_UPDATE ändert nichts, retry versucht B", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        objectWithoutPlate()
+        M.advance(3)
+        local saved = EmberstoneCommon
+        M.reset(profile, locale)
+        M.cvars.SoftTargetNameplateSize = "24"
+        local A2 = M.LoadAddon(ROOT)
+        EmberstoneCommon = saved
+        M.FireEvent("ADDON_LOADED", "Emberstone")
+        M.FireEvent("PLAYER_LOGIN")
+        eq(M.cvars.SoftTargetNameplateSize, "24", "nach Neustart nicht wieder 0")
+        eq(A2:GetSparkleMode(), "C")
+        M.cvars.SoftTargetNameplateSize = "30"
+        M.FireEvent("CVAR_UPDATE", "SoftTargetNameplateSize", "30")
+        M.advance(1)
+        eq(M.cvars.SoftTargetNameplateSize, "30", "Spielerwert bleibt")
+        SlashCmdList.EMBERSTONE("sparkle retry")
+        eq(A2:GetSparkleMode(), "B")
+        eq(M.cvars.SoftTargetNameplateSize, "0")
+        A2:SetSparkleOption("sparkleHerbs", false)
+        eq(M.cvars.SoftTargetNameplateSize, "30", "zurück auf den Spielerwert")
+    end)
+
+    test("Glitzern Rückfall C: nicht bei Zielwechsel, nicht im Kampf, nicht wenn alles aus", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        objectWithoutPlate()
+        M.advance(1)
+        M.soft = { guid = "GameObject-0-1-2-3-1617-0002" } -- anderes Objekt
+        M.advance(1.5)
+        eq(A:GetSparkleMode(), "B", "Zielwechsel")
+        M.soft = nil
+        M.advance(5)
+        objectWithoutPlate()
+        M.inCombat = true
+        M.advance(3)
+        eq(A:GetSparkleMode(), "B", "Kampf")
+        M.inCombat = false
+        A:SetSparkleOption("sparkleHerbs", false)
+        objectWithoutPlate()
+        M.advance(3)
+        eq(A:GetSparkleMode(), "B", "alles aus")
+    end)
+
+    test("Glitzern: Debug zeigt die Darstellung B bzw. C", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        SlashCmdList.EMBERSTONE("sparkle debug")
+        assert(has(M.printed, A.L["SPARKLE_MODE_B"]), "B fehlt")
+        objectWithoutPlate()
+        M.advance(3)
+        SlashCmdList.EMBERSTONE("sparkle debug")
+        assert(has(M.printed, A.L["SPARKLE_MODE_C"]), "C fehlt")
     end)
 
     test("Glitzern: /emberstone sparkle und sparkle debug ohne Fehler", function()

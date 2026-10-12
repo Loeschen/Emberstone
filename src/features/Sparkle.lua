@@ -19,6 +19,10 @@
 --   Objekt noch nicht benutzt werden kann (meist: ausser Reichweite), hell in
 --   Reichweite, grau, wenn dem Charakter der Beruf fehlt. Im Kampf aus.
 --   Einschraenkung: Soft Targeting waehlt immer nur EIN Objekt gleichzeitig.
+--   Aussehen (v1.13, Variante B): 4-5 goldene Funken mit weichem Schimmer an
+--   der Unterkante der Plakette, Blizzards schwebendes Symbol ausgeblendet.
+--   Legt der Client ohne Symbol keine Plakette an, faellt Emberstone von
+--   selbst auf Variante C zurueck (Symbol bleibt, Funken darunter).
 --
 -- Fuer beide Teile gilt: Jede CVar wird nur angefasst, wenn der Client sie
 -- kennt. Der Wert des Spielers wird vorher gespeichert und beim Ausschalten
@@ -44,6 +48,10 @@ local SOFT_CVARS = {
     { name = "softTargetInteract", value = "3" },       -- Enum.SoftTargetEnableFlags.Any
     { name = "SoftTargetIconGameObject", value = "1" }, -- Plakette auch fuer Objekte
     { name = "SoftTargetIconInteract", value = "1" },
+    -- Variante B: Blizzards schwebendes Symbol ausblenden (Blizzard_NamePlates.lua
+    -- zeigt es nur bei einer Groesse > 0). Ob die Plakette dann bleibt, an der
+    -- unser Glitzern haengt, ist nicht dokumentiert - siehe Rueckfall C unten.
+    { name = "SoftTargetNameplateSize", value = "0", modeB = true },
 }
 
 -- Loest eine Neuanwendung aus, wenn der Spieler die Grafik-Voreinstellung
@@ -70,7 +78,7 @@ local GROUPS = {
 local MANAGED = {}
 for key, group in pairs(GROUPS) do
     for _, cv in ipairs(group.cvars) do
-        MANAGED[cv.name:lower()] = { group = key, name = cv.name, value = cv.value }
+        MANAGED[cv.name:lower()] = { group = key, name = cv.name, value = cv.value, modeB = cv.modeB }
     end
 end
 
@@ -117,6 +125,13 @@ end
 -- ------------------------------------------------------------
 -- Anwenden / Wiederherstellen
 -- ------------------------------------------------------------
+-- Rueckfall C: Blizzards Symbol bleibt sichtbar, weil das Spiel ohne Symbol
+-- keine Plakette fuer das Objekt anlegt. Wird gespeichert, damit nicht bei
+-- jedem Login erneut umgeschaltet wird (/emberstone sparkle retry setzt zurueck).
+local function IsFallbackC()
+    return EmberstoneCommon and EmberstoneCommon.sparkleFallbackC and true or false
+end
+
 local applying = false   -- eigene SetCVar-Aufrufe nicht als Spieleraenderung werten
 local pending = false    -- im Kampf verschoben
 local refreshQueued = false
@@ -127,8 +142,8 @@ local function ApplyGroup(key)
     if group.wanted() then
         local saved = root[key] or {}
         for _, cv in ipairs(group.cvars) do
-            local current = CVarGet(cv.name)
-            if current ~= nil then -- unbekannte CVar: ueberspringen
+            local current = (not (cv.modeB and IsFallbackC())) and CVarGet(cv.name) or nil
+            if current ~= nil then -- unbekannte CVar oder Rueckfall C: ueberspringen
                 if saved[cv.name] == nil then saved[cv.name] = current end
                 if current ~= cv.value then CVarSet(cv.name, cv.value) end
             end
@@ -308,22 +323,21 @@ function Addon:ClassifySoftInteract()
 end
 
 local KIND_SETTING = { herb = "sparkleHerbs", ore = "sparkleOre", quest = "sparkleQuestObjects" }
-local KIND_COLOR = {
-    herb = { 0.45, 1.0, 0.45 },
-    ore = { 1.0, 0.72, 0.35 },
-    quest = { 1.0, 0.88, 0.3 },
-}
-local ALPHA_BRIGHT, ALPHA_DIM, ALPHA_GREY = 1.0, 0.35, 0.55
 
--- Aussehen fuer eine Einordnung: nil = nicht zeigen, sonst r, g, b, alpha, grau
+-- Einheitlich warmes Gold fuer alle Arten; "hell, schwach, grau" ueber
+-- Anzahl und Staerke der Funken (dezent: hoechstens 5).
+local LOOKS = {
+    bright = { name = "bright", r = 1.0, g = 0.82, b = 0.36, count = 5, strength = 1.0, shimmer = 0.5, grey = false },
+    dim    = { name = "dim",    r = 1.0, g = 0.82, b = 0.36, count = 3, strength = 0.45, shimmer = 0.18, grey = false },
+    grey   = { name = "grey",   r = 0.62, g = 0.62, b = 0.62, count = 4, strength = 0.6, shimmer = 0.22, grey = true },
+}
+
+-- Aussehen fuer eine Einordnung: nil = nicht zeigen, sonst ein Eintrag aus LOOKS
 function Addon:GetSparkleLook(info)
     if not info or not info.kind then return nil end
     if not self:GetSetting(KIND_SETTING[info.kind]) then return nil end
-    if info.noSkill then
-        return 0.6, 0.6, 0.6, ALPHA_GREY, true
-    end
-    local c = KIND_COLOR[info.kind]
-    return c[1], c[2], c[3], info.unable and ALPHA_DIM or ALPHA_BRIGHT, false
+    if info.noSkill then return LOOKS.grey end
+    return info.unable and LOOKS.dim or LOOKS.bright
 end
 
 -- ------------------------------------------------------------
@@ -331,28 +345,77 @@ end
 -- ------------------------------------------------------------
 local glitter
 local RECHECK = 0.3
+local MAX_POINTS = 5
+-- Lage relativ zur Unterkante der Plakette (dort sitzt das Objekt in etwa).
+-- Nach Rolands Bildern aus 5 und 20 Metern ggf. nachjustieren.
+local ANCHOR_X, ANCHOR_Y = 0, 0
+local AREA_W, AREA_H = 34, 14        -- halbe Breite/Hoehe des Funkel-Bereichs
+local POINT_MIN, POINT_MAX = 14, 22  -- Groesse eines Funkens
+local SHIMMER_W, SHIMMER_H = 96, 30  -- flacher Schimmer am Boden
+
+local function AssetPath(file)
+    return "Interface\\AddOns\\" .. ADDON_NAME .. "\\Assets\\" .. file
+end
+
+-- Ein Funke: blitzt auf, vergeht, taucht an neuer Stelle wieder auf
+local function RespawnPoint(p, first)
+    local angle = math.random() * 2 * math.pi
+    local dist = math.sqrt(math.random())
+    p.x = math.cos(angle) * dist * AREA_W
+    p.y = math.sin(angle) * dist * AREA_H + 6
+    p.size = POINT_MIN + math.random() * (POINT_MAX - POINT_MIN)
+    p.duration = 0.9 + math.random() * 0.7
+    p.age = first and -math.random() * 1.2 or -math.random() * 0.4 -- versetzt starten
+    p:ClearAllPoints()
+    p:SetPoint("CENTER", p:GetParent(), "CENTER", p.x, p.y)
+end
 
 local function BuildGlitter()
     if glitter or not UIParent then return glitter end
     local f = CreateFrame("Frame", nil, UIParent)
-    f:SetSize(64, 64)
+    f:SetSize(2 * AREA_W + POINT_MAX, 2 * AREA_H + POINT_MAX + 12)
     f:SetFrameStrata("BACKGROUND")
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetPoint("CENTER")
-    tex:SetSize(48, 48)
-    tex:SetTexture("Interface\\AddOns\\" .. ADDON_NAME .. "\\Assets\\sparkle.tga")
-    tex:SetBlendMode("ADD")
-    f.tex = tex
-    f.elapsed, f.sinceCheck, f.baseAlpha = 0, 0, 1
+
+    local shimmer = f:CreateTexture(nil, "BACKGROUND")
+    shimmer:SetPoint("CENTER", f, "CENTER", 0, 0)
+    shimmer:SetSize(SHIMMER_W, SHIMMER_H)
+    shimmer:SetTexture(AssetPath("glow.tga"))
+    shimmer:SetBlendMode("ADD")
+    f.shimmer = shimmer
+
+    f.points = {}
+    for i = 1, MAX_POINTS do
+        local p = f:CreateTexture(nil, "ARTWORK")
+        p:SetTexture(AssetPath("sparkle.tga"))
+        p:SetBlendMode("ADD")
+        p:SetAlpha(0)
+        RespawnPoint(p, true)
+        f.points[i] = p
+    end
+
+    f.elapsed, f.sinceCheck = 0, 0
+    f.look = nil -- wird beim ersten Anzeigen gesetzt (inkl. Farbe)
     f:Hide()
-    -- Leichtes Pulsieren; ausserdem regelmaessig neu einordnen (Reichweite
+    -- Funkeln animieren; ausserdem regelmaessig neu einordnen (Reichweite
     -- aendert sich beim Laufen, ohne dass sich das Ziel aendert).
     f:SetScript("OnUpdate", function(self, elapsed)
         self.elapsed = self.elapsed + elapsed
         self.sinceCheck = self.sinceCheck + elapsed
-        local wave = math.sin(self.elapsed * 3)
-        self.tex:SetSize(48 + 6 * wave, 48 + 6 * wave)
-        self.tex:SetAlpha(self.baseAlpha * (0.8 + 0.2 * wave))
+        local look = self.look or LOOKS.bright
+        self.shimmer:SetAlpha(look.shimmer * (0.85 + 0.15 * math.sin(self.elapsed * 2)))
+        for i, p in ipairs(self.points) do
+            if i > look.count then
+                p:SetAlpha(0)
+            else
+                p.age = p.age + elapsed
+                if p.age >= p.duration then RespawnPoint(p, false) end
+                local t = p.age > 0 and (p.age / p.duration) or 0
+                local s = math.sin(t * math.pi)
+                p:SetAlpha(look.strength * s * s)
+                local size = p.size * (0.7 + 0.3 * s)
+                p:SetSize(size, size)
+            end
+        end
         if self.sinceCheck >= RECHECK then
             self.sinceCheck = 0
             UpdateGlitter()
@@ -374,19 +437,82 @@ UpdateGlitter = function()
     if not GROUPS.soft.wanted() or Addon:GetSparkleConflict() or InCombat() then return hide() end
 
     local info = Addon:ClassifySoftInteract()
-    local r, g, b, alpha, grey = Addon:GetSparkleLook(info)
-    if not r then return hide() end
+    local look = Addon:GetSparkleLook(info)
+    if not look then return hide() end
     local plate = SoftPlate(info.unit)
     if not plate then return hide() end
 
     local f = BuildGlitter()
     if not f then return end
     f:ClearAllPoints()
-    f:SetPoint("CENTER", plate, "CENTER", 0, 0)
-    f.tex:SetVertexColor(r, g, b)
-    if f.tex.SetDesaturated then f.tex:SetDesaturated(grey) end
-    f.baseAlpha = alpha
+    f:SetPoint("CENTER", plate, "BOTTOM", ANCHOR_X, ANCHOR_Y)
+    if f.look ~= look then
+        f.look = look
+        f.shimmer:SetVertexColor(look.r, look.g, look.b)
+        if f.shimmer.SetDesaturated then f.shimmer:SetDesaturated(look.grey) end
+        for _, p in ipairs(f.points) do
+            p:SetVertexColor(look.r, look.g, look.b)
+            if p.SetDesaturated then p:SetDesaturated(look.grey) end
+        end
+    end
     f:Show()
+end
+
+-- ------------------------------------------------------------
+-- Rueckfall von B auf C
+-- ------------------------------------------------------------
+-- Hat das Spiel ein Objekt ausgewaehlt (UnitGUID("softinteract") ist ein
+-- GameObject - auf Forever bestaetigt), aber nach PLATE_WAIT Sekunden gibt
+-- es immer noch keine Plakette dafuer, legt der Client ohne Symbol offenbar
+-- keine an. Dann den alten Symbol-Wert zuruecksetzen und bei C bleiben.
+local PLATE_WAIT = 2
+
+local function SoftObjectGUID()
+    if not UnitGUID then return nil end
+    local ok, guid = pcall(UnitGUID, UNIT)
+    if ok and type(guid) == "string" and not (issecretvalue and issecretvalue(guid))
+        and guid:find("^GameObject") then
+        return guid
+    end
+    return nil
+end
+
+function Addon:GetSparkleMode()
+    if IsFallbackC() then return "C" end
+    if CVarGet("SoftTargetNameplateSize") == nil then return "C" end -- CVar unbekannt
+    return "B"
+end
+
+local function WatchModeB()
+    return GROUPS.soft.wanted() and not IsFallbackC() and not Addon:GetSparkleConflict()
+        and not InCombat() and CVarGet("SoftTargetNameplateSize") == "0"
+end
+
+function Addon:ActivateSparkleFallback()
+    if IsFallbackC() then return end
+    EmberstoneCommon.sparkleFallbackC = true
+    local saved = SavedRoot().soft
+    if saved and saved.SoftTargetNameplateSize ~= nil then
+        applying = true
+        CVarSet("SoftTargetNameplateSize", saved.SoftTargetNameplateSize)
+        applying = false
+        saved.SoftTargetNameplateSize = nil
+    end
+    print(L["SPARKLE_FALLBACK_NOTICE"])
+    UpdateGlitter()
+end
+
+local function CheckPlateLater()
+    if not WatchModeB() then return end
+    local guid = SoftObjectGUID()
+    if not guid then return end
+    local function check()
+        if not WatchModeB() then return end
+        if SoftObjectGUID() ~= guid then return end -- inzwischen anderes Ziel
+        if FindSoftUnit() then return end           -- Plakette da: B klappt
+        Addon:ActivateSparkleFallback()
+    end
+    if C_Timer and C_Timer.After then C_Timer.After(PLATE_WAIT, check) end
 end
 
 -- Nur fuer Tests
@@ -417,7 +543,9 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
         if issecretvalue and (issecretvalue(arg1) or issecretvalue(arg2)) then return end
         local name = arg1:lower()
         local managed = MANAGED[name]
-        if managed then
+        if managed and managed.modeB and IsFallbackC() then
+            return -- im Rueckfall C gehoert der Wert wieder dem Spieler
+        elseif managed then
             -- Spieler oder Voreinstellung hat den Wert geaendert: diesen
             -- neuen Wert als "seinen" merken und unseren wieder setzen.
             local saved = SavedRoot()[managed.group]
@@ -437,16 +565,23 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
             plateTokens[arg1] = nil
         end
         UpdateGlitter()
+        if event == "PLAYER_SOFT_INTERACT_CHANGED" then CheckPlateLater() end
     end
 end)
 
 -- ------------------------------------------------------------
--- Befehl: /emberstone sparkle [debug]
+-- Befehl: /emberstone sparkle [debug|retry]
 -- ------------------------------------------------------------
 local function OnOff(v) return v and L["SPARKLE_STATE_ON"] or L["SPARKLE_STATE_OFF"] end
 
 function Addon:HandleSparkleCommand(rest)
     local sub = self:Trim(rest):lower()
+    if sub == "retry" then
+        EmberstoneCommon.sparkleFallbackC = nil
+        self:RefreshSparkle()
+        print(L["SPARKLE_RETRY_DONE"])
+        return
+    end
     if sub == "debug" then
         local info = self:ClassifySoftInteract()
         local guid = info.unit and UnitGUID and select(2, pcall(UnitGUID, info.unit))
@@ -462,6 +597,9 @@ function Addon:HandleSparkleCommand(rest)
             OnOff(self:GetSetting("sparkleHerbs")), OnOff(self:GetSetting("sparkleOre")),
             OnOff(self:GetSetting("sparkleQuestObjects")), tostring(CVarGet("softTargetInteract")),
             tostring(CVarGet("SoftTargetIconGameObject")), tostring(InCombat())))
+        print(string.format(L["SPARKLE_DEBUG_MODE"],
+            self:GetSparkleMode() == "B" and L["SPARKLE_MODE_B"] or L["SPARKLE_MODE_C"],
+            tostring(CVarGet("SoftTargetNameplateSize"))))
         return
     end
     local conflict = self:GetSparkleConflict()

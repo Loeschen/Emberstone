@@ -32,6 +32,7 @@ function M.reset(profile, locale)
         outlineModeShowLootEffectWhenDisabled = "0", graphicsOutlineMode = "2", OutlineEngineMode = "1",
         raidGraphicsOutlineMode = "1", RAIDOutlineEngineMode = "1", graphicsQuality = "7",
         softTargetInteract = "1", SoftTargetIconGameObject = "0", SoftTargetIconInteract = "1",
+        SoftTargetNameplateSize = "24",
     }
     M.cvarSets = {}        -- { {name, value, inCombat} }
     M.loadedAddons = {}
@@ -80,7 +81,7 @@ function frameMT:GetWidth() return self._w end
 function frameMT:ClearAllPoints() self._points = {} end
 function frameMT:SetPoint(...) table.insert(self._points, { ... }) end
 function frameMT:GetParent() return self._parent end
-function frameMT:CreateTexture() return NewFrame("Texture") end
+function frameMT:CreateTexture() return NewFrame("Texture", nil, self) end
 function frameMT:SetTexture(path) self._file = path end
 function frameMT:GetTexture() return self._file end
 function frameMT:GetTextureFilePath() return self._file end
@@ -203,7 +204,7 @@ function M.install()
     _G.UnitName = function(u) if u == "player" then return M.playerName or "Anna Müller" end end
     _G.UnitGUID = function(u)
         if u == "player" then return "Player-1-0001" end
-        if M.soft and u == M.soft.token then return M.soft.guid end
+        if M.soft and (u == M.soft.token or (u == "softinteract" and not M.soft.noGuid)) then return M.soft.guid end
     end
     _G.UnitIsAFK = function() return false end
     _G.UnitIsDead = function() return false end
