@@ -19,9 +19,9 @@
 --   Objekt noch nicht benutzt werden kann (meist: ausser Reichweite), hell in
 --   Reichweite, grau, wenn dem Charakter der Beruf fehlt. Im Kampf aus.
 --   Einschraenkung: Soft Targeting waehlt immer nur EIN Objekt gleichzeitig.
---   Aussehen (v1.13, Variante B): ein goldenes Symbol an der Unterkante der
---   Plakette (fuenf Formen zur Auswahl, Standard: pulsierender Stern),
---   Blizzards schwebendes Symbol ausgeblendet.
+--   Aussehen (v1.13, Variante B): ein grosses, weich pulsierendes Leuchten
+--   (additiv) an der Unterkante der Plakette, fuenf Farben zur Auswahl
+--   (Standard: Gold), Blizzards schwebendes Symbol ausgeblendet.
 --   Legt der Client ohne Symbol keine Plakette an, faellt Emberstone von
 --   selbst auf Variante C zurueck (Symbol bleibt, Funken darunter).
 --
@@ -325,12 +325,14 @@ end
 
 local KIND_SETTING = { herb = "sparkleHerbs", ore = "sparkleOre", quest = "sparkleQuestObjects" }
 
--- "Hell, schwach, grau" - gilt fuer alle Symbole. Einheitlich warmes Gold.
+-- "Hell, schwach, grau" - gilt fuer alle Farben. Die Farbe selbst kommt aus
+-- der gewaehlten Variante, "grau" ersetzt sie.
 local LOOKS = {
-    bright = { name = "bright", r = 1.0, g = 0.80, b = 0.30, strength = 1.0, scale = 1.0, grey = false },
-    dim    = { name = "dim",    r = 1.0, g = 0.80, b = 0.30, strength = 0.45, scale = 0.8, grey = false },
-    grey   = { name = "grey",   r = 0.65, g = 0.65, b = 0.65, strength = 0.75, scale = 0.9, grey = true },
+    bright = { name = "bright", strength = 1.0, scale = 1.0, grey = false },
+    dim    = { name = "dim",    strength = 0.4, scale = 0.8, grey = false },
+    grey   = { name = "grey",   strength = 0.6, scale = 0.9, grey = true },
 }
+local GREY_COLOR = { 0.7, 0.7, 0.7 }
 
 -- Aussehen fuer eine Einordnung: nil = nicht zeigen, sonst ein Eintrag aus LOOKS
 function Addon:GetSparkleLook(info)
@@ -341,19 +343,20 @@ function Addon:GetSparkleLook(info)
 end
 
 -- ------------------------------------------------------------
--- Teil 2: Die Glitzer-Symbole (v1.13: fuenf zur Auswahl)
+-- Teil 2: Das Leuchten (v1.13: fuenf Farben zur Auswahl)
 -- ------------------------------------------------------------
--- Alle Grafiken selbst erstellt: weisser Kern mit dunklem Rand (wird golden
--- eingefaerbt), dazu ein weicher dunkler Schatten dahinter - so bleibt das
--- Symbol vor hellem Nebel wie in dunklen Gegenden gut sichtbar.
--- Lage: relativ zur Unterkante der Namensplakette (dort sitzt das Objekt in
--- etwa); "y" schiebt das Symbol nach unten zur Pflanze hin.
+-- Weiches magisches Leuchten mit additiver Ueberblendung (wie Effekte im
+-- Spiel): ein grosser weicher Schein (glow.tga) und darueber ein heller
+-- Kern mit feinen Lichtstrahlen (sparkle_glow.tga), beide selbst erstellt
+-- und eingefaerbt, sanft pulsierend. Die Varianten unterscheiden sich nur
+-- in der Farbe. Lage: relativ zur Unterkante der Namensplakette (dort sitzt
+-- das Objekt in etwa); "y" schiebt das Leuchten nach unten zur Pflanze.
 local SPARKLE_STYLES = {
-    { id = "star",  file = "sparkle_star.tga",  w = 72, h = 72,  point = "CENTER", y = -16, anim = "pulse" },
-    { id = "beam",  file = "sparkle_beam.tga",  w = 34, h = 118, point = "BOTTOM", y = -28, anim = "beam" },
-    { id = "ring",  file = "sparkle_ring.tga",  w = 96, h = 36,  point = "CENTER", y = -24, anim = "ripple" },
-    { id = "gem",   file = "sparkle_gem.tga",   w = 38, h = 50,  point = "CENTER", y = -6,  anim = "bob" },
-    { id = "burst", file = "sparkle_burst.tga", w = 84, h = 84,  point = "CENTER", y = -16, anim = "spin" },
+    { id = "gold",   color = { 1.0, 0.78, 0.25 } },
+    { id = "green",  color = { 0.35, 1.0, 0.35 } },
+    { id = "arcane", color = { 0.35, 0.65, 1.0 } },
+    { id = "white",  color = { 1.0, 1.0, 0.95 } },
+    { id = "violet", color = { 0.78, 0.4, 1.0 } },
 }
 local STYLE_BY_ID = {}
 for i, style in ipairs(SPARKLE_STYLES) do
@@ -361,6 +364,10 @@ for i, style in ipairs(SPARKLE_STYLES) do
     STYLE_BY_ID[style.id] = style
 end
 Addon.SparkleStyles = SPARKLE_STYLES
+
+local GLOW_SIZE = 110      -- Kern mit Strahlen (in Reichweite)
+local HALO_SIZE = 150      -- weicher Schein dahinter
+local GLOW_Y = -16         -- unter die Unterkante der Plakette, naeher an die Pflanze
 
 local function AssetPath(file)
     return "Interface\\AddOns\\" .. ADDON_NAME .. "\\Assets\\" .. file
@@ -374,80 +381,60 @@ end
 local glitter
 local RECHECK = 0.3
 
--- Bewegung je Symbol. t = Zeit in Sekunden, s = Groessenfaktor aus "look".
--- Rueckgabe: Breite, Hoehe, Deckkraft-Faktor, y-Versatz, Drehung (Bogenmass)
-local ANIMS = {
-    pulse = function(st, t, s)              -- sanft pulsierender Stern
-        local k = 1 + 0.12 * math.sin(t * 2.4)
-        return st.w * s * k, st.h * s * k, 0.85 + 0.15 * math.sin(t * 2.4), 0, 0
-    end,
-    beam = function(st, t, s)               -- Lichtsaeule, atmet nach oben
-        local k = 1 + 0.08 * math.sin(t * 2)
-        return st.w * s, st.h * s * k, 0.75 + 0.25 * math.sin(t * 2), 0, 0
-    end,
-    ripple = function(st, t, s)             -- Ring am Boden, breitet sich aus
-        local phase = (t % 1.6) / 1.6
-        local k = 0.6 + 0.6 * phase
-        return st.w * s * k, st.h * s * k, 1 - phase * phase, 0, 0
-    end,
-    bob = function(st, t, s)                -- Kristall, schwebt auf und ab
-        local k = 1 + 0.06 * math.sin(t * 3)
-        return st.w * s * k, st.h * s * k, 0.9 + 0.1 * math.sin(t * 3), 4 * math.sin(t * 2.2), 0
-    end,
-    spin = function(st, t, s)               -- Strahlenkranz, dreht sich langsam
-        local k = 1 + 0.06 * math.sin(t * 2)
-        return st.w * s * k, st.h * s * k, 0.9 + 0.1 * math.sin(t * 2), 0, t * 0.8
-    end,
-}
-
--- Setzt ein Symbol (Textur "main" mit Schatten "shadow") fuer Zeitpunkt t.
--- Wird auch fuer die Vorschau in den Optionen benutzt.
-function Addon:DrawSparkle(main, shadow, style, look, t, anchor)
-    local w, h, alpha, dy, rot = ANIMS[style.anim](style, t, look.scale)
-    main:SetSize(w, h)
+-- Setzt das Leuchten (Kern "main", Schein "halo") fuer Zeitpunkt t, sanft
+-- pulsierend. Wird auch fuer die Vorschau in den Optionen benutzt.
+function Addon:DrawSparkle(main, halo, look, t, anchor, size, y)
+    size = (size or GLOW_SIZE) * look.scale
+    local wave = math.sin(t * 2.4)
+    local k = 1 + 0.10 * wave
+    main:SetSize(size * k, size * k)
     main:ClearAllPoints()
-    main:SetPoint(style.point, anchor, "CENTER", 0, style.y + dy)
-    main:SetAlpha(look.strength * alpha)
-    if main.SetRotation then pcall(main.SetRotation, main, rot) end
-    if shadow then
-        shadow:SetSize(style.w * look.scale * 1.35, style.h * look.scale * 1.2)
-        shadow:ClearAllPoints()
-        shadow:SetPoint("CENTER", main, "CENTER", 0, 0)
-        shadow:SetAlpha(0.4 * look.strength)
+    main:SetPoint("CENTER", anchor, "CENTER", 0, y or GLOW_Y)
+    main:SetAlpha(look.strength * (0.85 + 0.15 * wave))
+    if halo then
+        local hs = size * (HALO_SIZE / GLOW_SIZE) * (1 + 0.06 * wave)
+        halo:SetSize(hs, hs)
+        halo:ClearAllPoints()
+        halo:SetPoint("CENTER", main, "CENTER", 0, 0)
+        halo:SetAlpha(look.strength * (0.55 + 0.1 * wave))
     end
 end
 
-function Addon:ApplySparkleColors(main, shadow, style, look)
-    main:SetTexture(AssetPath(style.file))
-    main:SetVertexColor(look.r, look.g, look.b)
-    if main.SetDesaturated then main:SetDesaturated(look.grey) end
-    if shadow then shadow:SetVertexColor(0, 0, 0) end
+function Addon:ApplySparkleColors(main, halo, style, look)
+    local c = look.grey and GREY_COLOR or style.color
+    for _, tex in ipairs({ main, halo }) do
+        tex:SetVertexColor(c[1], c[2], c[3])
+        if tex.SetDesaturated then tex:SetDesaturated(look.grey) end
+    end
 end
+
+local function NewGlowTextures(parent)
+    local halo = parent:CreateTexture(nil, "BORDER")
+    halo:SetTexture(AssetPath("glow.tga"))
+    halo:SetBlendMode("ADD")
+    local main = parent:CreateTexture(nil, "ARTWORK")
+    main:SetTexture(AssetPath("sparkle_glow.tga"))
+    main:SetBlendMode("ADD")
+    return main, halo
+end
+Addon.NewSparkleTextures = NewGlowTextures
 
 local function BuildGlitter()
     if glitter or not UIParent then return glitter end
     local f = CreateFrame("Frame", nil, UIParent)
     f:SetSize(8, 8)
     f:SetFrameStrata("BACKGROUND")
-
-    local shadow = f:CreateTexture(nil, "BACKGROUND")
-    shadow:SetTexture(AssetPath("glow.tga"))
-    shadow:SetVertexColor(0, 0, 0)
-    f.shadow = shadow
-
-    local main = f:CreateTexture(nil, "ARTWORK")
-    f.main = main
-
+    f.main, f.halo = NewGlowTextures(f)
     f.elapsed, f.sinceCheck = 0, 0
     f.look, f.style = nil, nil -- werden beim ersten Anzeigen gesetzt (inkl. Farbe)
     f:Hide()
-    -- Animieren; ausserdem regelmaessig neu einordnen (Reichweite aendert
+    -- Pulsieren; ausserdem regelmaessig neu einordnen (Reichweite aendert
     -- sich beim Laufen, ohne dass sich das Ziel aendert).
     f:SetScript("OnUpdate", function(self, elapsed)
         self.elapsed = self.elapsed + elapsed
         self.sinceCheck = self.sinceCheck + elapsed
-        if self.style and self.look then
-            Addon:DrawSparkle(self.main, self.shadow, self.style, self.look, self.elapsed, self)
+        if self.look then
+            Addon:DrawSparkle(self.main, self.halo, self.look, self.elapsed, self)
         end
         if self.sinceCheck >= RECHECK then
             self.sinceCheck = 0
@@ -482,13 +469,13 @@ UpdateGlitter = function()
     local style = Addon:GetSparkleStyle()
     if f.look ~= look or f.style ~= style then
         f.look, f.style = look, style
-        Addon:ApplySparkleColors(f.main, f.shadow, style, look)
-        Addon:DrawSparkle(f.main, f.shadow, style, look, f.elapsed, f)
+        Addon:ApplySparkleColors(f.main, f.halo, style, look)
+        Addon:DrawSparkle(f.main, f.halo, look, f.elapsed, f)
     end
     f:Show()
 end
 
--- Symbol auswaehlen (Optionen, /emberstone sparkle style ...)
+-- Farbe auswaehlen (Optionen, /emberstone sparkle style ...)
 function Addon:SetSparkleStyle(id)
     local style = STYLE_BY_ID[id] or SPARKLE_STYLES[tonumber(id) or 0]
     if not style then return nil end

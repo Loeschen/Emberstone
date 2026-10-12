@@ -356,14 +356,15 @@ local function BuildSparklePanel()
     AddBox("sparkleOre", L["OPT_SPARKLE_ORE_LABEL"], L["OPT_SPARKLE_ORE_TOOLTIP"])
     AddBox("sparkleQuestObjects", L["OPT_SPARKLE_QUESTOBJ_LABEL"], L["OPT_SPARKLE_QUESTOBJ_TOOLTIP"])
 
-    -- Symbol-Auswahl: fuenf Knoepfe mit kleiner, bewegter Vorschau
+    -- Farb-Auswahl: fuenf Knoepfe mit kleiner, pulsierender Vorschau
     local styleLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     styleLabel:SetPoint("TOPLEFT", 20, y - 8)
     styleLabel:SetText(L["OPT_SPARKLE_STYLE_LABEL"])
     y = y - 30
 
     local styleButtons = {}
-    local previewLook = { r = 1.0, g = 0.80, b = 0.30, strength = 1.0, scale = 0.55, grey = false }
+    local previewLook = { strength = 1.0, scale = 1.0, grey = false }
+    local PREVIEW_SIZE = 56
     for i, style in ipairs(Addon.SparkleStyles or {}) do
         local b = CreateFrame("Button", nil, panel)
         b:SetSize(72, 72)
@@ -374,16 +375,14 @@ local function BuildSparklePanel()
         local bg = b:CreateTexture(nil, "BACKGROUND")
         bg:SetPoint("TOPLEFT", 2, -2)
         bg:SetPoint("BOTTOMRIGHT", -2, 2)
-        -- Hintergrund in neblig-gruenem Grau, damit die Vorschau wie im Spiel wirkt
-        if bg.SetColorTexture then bg:SetColorTexture(0.32, 0.38, 0.30, 1) end
-        local shadow = b:CreateTexture(nil, "BORDER")
-        shadow:SetTexture(Addon.SparkleAssetPath("glow.tga"))
-        local main = b:CreateTexture(nil, "ARTWORK")
-        Addon:ApplySparkleColors(main, shadow, style, previewLook)
-        -- Vorschau mittig (nicht mit dem Versatz zur Pflanze)
-        local previewStyle = setmetatable({ y = style.point == "BOTTOM" and -32 or 0 }, { __index = style })
-        b.preview = { main = main, shadow = shadow, style = previewStyle }
-        Addon:DrawSparkle(main, shadow, previewStyle, previewLook, 0, b)
+        -- Dunkler, leicht gruenlicher Hintergrund wie eine naechtliche Wiese:
+        -- das additive Leuchten wirkt dort so wie im Spiel
+        if bg.SetColorTexture then bg:SetColorTexture(0.08, 0.11, 0.08, 1) end
+        local main, halo = Addon.NewSparkleTextures(b)
+        Addon:ApplySparkleColors(main, halo, style, previewLook)
+        b.preview = { main = main, halo = halo }
+        -- Vorschau mittig (nicht mit dem Versatz zur Pflanze) und kleiner
+        Addon:DrawSparkle(main, halo, previewLook, 0, b, PREVIEW_SIZE, 0)
         local name = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         name:SetPoint("TOP", b, "BOTTOM", 0, -3)
         name:SetText(L["SPARKLE_STYLE_" .. style.id:upper()])
@@ -404,7 +403,7 @@ local function BuildSparklePanel()
     panel:SetScript("OnUpdate", function(_, elapsed)
         previewTime = previewTime + elapsed
         for _, b in ipairs(styleButtons) do
-            Addon:DrawSparkle(b.preview.main, b.preview.shadow, b.preview.style, previewLook, previewTime, b)
+            Addon:DrawSparkle(b.preview.main, b.preview.halo, previewLook, previewTime, b, PREVIEW_SIZE, 0)
         end
     end)
 
