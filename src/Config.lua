@@ -57,6 +57,7 @@ Addon.Defaults = {
     sparkleHerbs                  = false, -- Kraeuter (Soft Targeting)
     sparkleOre                    = false, -- Erzadern (Soft Targeting)
     sparkleQuestObjects           = false, -- Questobjekte (Soft Targeting)
+    sparkleStyle                  = "star", -- Symbol: star, beam, ring, gem, burst
 
     -- Gildenweite Levelup-Benachrichtigungen - urspruenglich das eigenstaendige Addon "GrindDing"
     guildDingEnabled              = true,

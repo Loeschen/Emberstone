@@ -19,8 +19,9 @@
 --   Objekt noch nicht benutzt werden kann (meist: ausser Reichweite), hell in
 --   Reichweite, grau, wenn dem Charakter der Beruf fehlt. Im Kampf aus.
 --   Einschraenkung: Soft Targeting waehlt immer nur EIN Objekt gleichzeitig.
---   Aussehen (v1.13, Variante B): 4-5 goldene Funken mit weichem Schimmer an
---   der Unterkante der Plakette, Blizzards schwebendes Symbol ausgeblendet.
+--   Aussehen (v1.13, Variante B): ein goldenes Symbol an der Unterkante der
+--   Plakette (fuenf Formen zur Auswahl, Standard: pulsierender Stern),
+--   Blizzards schwebendes Symbol ausgeblendet.
 --   Legt der Client ohne Symbol keine Plakette an, faellt Emberstone von
 --   selbst auf Variante C zurueck (Symbol bleibt, Funken darunter).
 --
@@ -324,12 +325,11 @@ end
 
 local KIND_SETTING = { herb = "sparkleHerbs", ore = "sparkleOre", quest = "sparkleQuestObjects" }
 
--- Einheitlich warmes Gold fuer alle Arten; "hell, schwach, grau" ueber
--- Anzahl und Staerke der Funken (dezent: hoechstens 5).
+-- "Hell, schwach, grau" - gilt fuer alle Symbole. Einheitlich warmes Gold.
 local LOOKS = {
-    bright = { name = "bright", r = 1.0, g = 0.82, b = 0.36, count = 5, strength = 1.0, shimmer = 0.5, grey = false },
-    dim    = { name = "dim",    r = 1.0, g = 0.82, b = 0.36, count = 3, strength = 0.45, shimmer = 0.18, grey = false },
-    grey   = { name = "grey",   r = 0.62, g = 0.62, b = 0.62, count = 4, strength = 0.6, shimmer = 0.22, grey = true },
+    bright = { name = "bright", r = 1.0, g = 0.80, b = 0.30, strength = 1.0, scale = 1.0, grey = false },
+    dim    = { name = "dim",    r = 1.0, g = 0.80, b = 0.30, strength = 0.45, scale = 0.8, grey = false },
+    grey   = { name = "grey",   r = 0.65, g = 0.65, b = 0.65, strength = 0.75, scale = 0.9, grey = true },
 }
 
 -- Aussehen fuer eine Einordnung: nil = nicht zeigen, sonst ein Eintrag aus LOOKS
@@ -341,80 +341,113 @@ function Addon:GetSparkleLook(info)
 end
 
 -- ------------------------------------------------------------
--- Teil 2: Die Glitzer-Grafik
+-- Teil 2: Die Glitzer-Symbole (v1.13: fuenf zur Auswahl)
 -- ------------------------------------------------------------
-local glitter
-local RECHECK = 0.3
-local MAX_POINTS = 5
--- Lage relativ zur Unterkante der Plakette (dort sitzt das Objekt in etwa).
--- Nach Rolands Bildern aus 5 und 20 Metern ggf. nachjustieren.
-local ANCHOR_X, ANCHOR_Y = 0, 0
-local AREA_W, AREA_H = 34, 14        -- halbe Breite/Hoehe des Funkel-Bereichs
-local POINT_MIN, POINT_MAX = 14, 22  -- Groesse eines Funkens
-local SHIMMER_W, SHIMMER_H = 96, 30  -- flacher Schimmer am Boden
+-- Alle Grafiken selbst erstellt: weisser Kern mit dunklem Rand (wird golden
+-- eingefaerbt), dazu ein weicher dunkler Schatten dahinter - so bleibt das
+-- Symbol vor hellem Nebel wie in dunklen Gegenden gut sichtbar.
+-- Lage: relativ zur Unterkante der Namensplakette (dort sitzt das Objekt in
+-- etwa); "y" schiebt das Symbol nach unten zur Pflanze hin.
+local SPARKLE_STYLES = {
+    { id = "star",  file = "sparkle_star.tga",  w = 72, h = 72,  point = "CENTER", y = -16, anim = "pulse" },
+    { id = "beam",  file = "sparkle_beam.tga",  w = 34, h = 118, point = "BOTTOM", y = -28, anim = "beam" },
+    { id = "ring",  file = "sparkle_ring.tga",  w = 96, h = 36,  point = "CENTER", y = -24, anim = "ripple" },
+    { id = "gem",   file = "sparkle_gem.tga",   w = 38, h = 50,  point = "CENTER", y = -6,  anim = "bob" },
+    { id = "burst", file = "sparkle_burst.tga", w = 84, h = 84,  point = "CENTER", y = -16, anim = "spin" },
+}
+local STYLE_BY_ID = {}
+for i, style in ipairs(SPARKLE_STYLES) do
+    style.index = i
+    STYLE_BY_ID[style.id] = style
+end
+Addon.SparkleStyles = SPARKLE_STYLES
 
 local function AssetPath(file)
     return "Interface\\AddOns\\" .. ADDON_NAME .. "\\Assets\\" .. file
 end
+Addon.SparkleAssetPath = AssetPath
 
--- Ein Funke: blitzt auf, vergeht, taucht an neuer Stelle wieder auf
-local function RespawnPoint(p, first)
-    local angle = math.random() * 2 * math.pi
-    local dist = math.sqrt(math.random())
-    p.x = math.cos(angle) * dist * AREA_W
-    p.y = math.sin(angle) * dist * AREA_H + 6
-    p.size = POINT_MIN + math.random() * (POINT_MAX - POINT_MIN)
-    p.duration = 0.9 + math.random() * 0.7
-    p.age = first and -math.random() * 1.2 or -math.random() * 0.4 -- versetzt starten
-    p:ClearAllPoints()
-    p:SetPoint("CENTER", p:GetParent(), "CENTER", p.x, p.y)
+function Addon:GetSparkleStyle()
+    return STYLE_BY_ID[self:GetSetting("sparkleStyle")] or SPARKLE_STYLES[1]
+end
+
+local glitter
+local RECHECK = 0.3
+
+-- Bewegung je Symbol. t = Zeit in Sekunden, s = Groessenfaktor aus "look".
+-- Rueckgabe: Breite, Hoehe, Deckkraft-Faktor, y-Versatz, Drehung (Bogenmass)
+local ANIMS = {
+    pulse = function(st, t, s)              -- sanft pulsierender Stern
+        local k = 1 + 0.12 * math.sin(t * 2.4)
+        return st.w * s * k, st.h * s * k, 0.85 + 0.15 * math.sin(t * 2.4), 0, 0
+    end,
+    beam = function(st, t, s)               -- Lichtsaeule, atmet nach oben
+        local k = 1 + 0.08 * math.sin(t * 2)
+        return st.w * s, st.h * s * k, 0.75 + 0.25 * math.sin(t * 2), 0, 0
+    end,
+    ripple = function(st, t, s)             -- Ring am Boden, breitet sich aus
+        local phase = (t % 1.6) / 1.6
+        local k = 0.6 + 0.6 * phase
+        return st.w * s * k, st.h * s * k, 1 - phase * phase, 0, 0
+    end,
+    bob = function(st, t, s)                -- Kristall, schwebt auf und ab
+        local k = 1 + 0.06 * math.sin(t * 3)
+        return st.w * s * k, st.h * s * k, 0.9 + 0.1 * math.sin(t * 3), 4 * math.sin(t * 2.2), 0
+    end,
+    spin = function(st, t, s)               -- Strahlenkranz, dreht sich langsam
+        local k = 1 + 0.06 * math.sin(t * 2)
+        return st.w * s * k, st.h * s * k, 0.9 + 0.1 * math.sin(t * 2), 0, t * 0.8
+    end,
+}
+
+-- Setzt ein Symbol (Textur "main" mit Schatten "shadow") fuer Zeitpunkt t.
+-- Wird auch fuer die Vorschau in den Optionen benutzt.
+function Addon:DrawSparkle(main, shadow, style, look, t, anchor)
+    local w, h, alpha, dy, rot = ANIMS[style.anim](style, t, look.scale)
+    main:SetSize(w, h)
+    main:ClearAllPoints()
+    main:SetPoint(style.point, anchor, "CENTER", 0, style.y + dy)
+    main:SetAlpha(look.strength * alpha)
+    if main.SetRotation then pcall(main.SetRotation, main, rot) end
+    if shadow then
+        shadow:SetSize(style.w * look.scale * 1.35, style.h * look.scale * 1.2)
+        shadow:ClearAllPoints()
+        shadow:SetPoint("CENTER", main, "CENTER", 0, 0)
+        shadow:SetAlpha(0.4 * look.strength)
+    end
+end
+
+function Addon:ApplySparkleColors(main, shadow, style, look)
+    main:SetTexture(AssetPath(style.file))
+    main:SetVertexColor(look.r, look.g, look.b)
+    if main.SetDesaturated then main:SetDesaturated(look.grey) end
+    if shadow then shadow:SetVertexColor(0, 0, 0) end
 end
 
 local function BuildGlitter()
     if glitter or not UIParent then return glitter end
     local f = CreateFrame("Frame", nil, UIParent)
-    f:SetSize(2 * AREA_W + POINT_MAX, 2 * AREA_H + POINT_MAX + 12)
+    f:SetSize(8, 8)
     f:SetFrameStrata("BACKGROUND")
 
-    local shimmer = f:CreateTexture(nil, "BACKGROUND")
-    shimmer:SetPoint("CENTER", f, "CENTER", 0, 0)
-    shimmer:SetSize(SHIMMER_W, SHIMMER_H)
-    shimmer:SetTexture(AssetPath("glow.tga"))
-    shimmer:SetBlendMode("ADD")
-    f.shimmer = shimmer
+    local shadow = f:CreateTexture(nil, "BACKGROUND")
+    shadow:SetTexture(AssetPath("glow.tga"))
+    shadow:SetVertexColor(0, 0, 0)
+    f.shadow = shadow
 
-    f.points = {}
-    for i = 1, MAX_POINTS do
-        local p = f:CreateTexture(nil, "ARTWORK")
-        p:SetTexture(AssetPath("sparkle.tga"))
-        p:SetBlendMode("ADD")
-        p:SetAlpha(0)
-        RespawnPoint(p, true)
-        f.points[i] = p
-    end
+    local main = f:CreateTexture(nil, "ARTWORK")
+    f.main = main
 
     f.elapsed, f.sinceCheck = 0, 0
-    f.look = nil -- wird beim ersten Anzeigen gesetzt (inkl. Farbe)
+    f.look, f.style = nil, nil -- werden beim ersten Anzeigen gesetzt (inkl. Farbe)
     f:Hide()
-    -- Funkeln animieren; ausserdem regelmaessig neu einordnen (Reichweite
-    -- aendert sich beim Laufen, ohne dass sich das Ziel aendert).
+    -- Animieren; ausserdem regelmaessig neu einordnen (Reichweite aendert
+    -- sich beim Laufen, ohne dass sich das Ziel aendert).
     f:SetScript("OnUpdate", function(self, elapsed)
         self.elapsed = self.elapsed + elapsed
         self.sinceCheck = self.sinceCheck + elapsed
-        local look = self.look or LOOKS.bright
-        self.shimmer:SetAlpha(look.shimmer * (0.85 + 0.15 * math.sin(self.elapsed * 2)))
-        for i, p in ipairs(self.points) do
-            if i > look.count then
-                p:SetAlpha(0)
-            else
-                p.age = p.age + elapsed
-                if p.age >= p.duration then RespawnPoint(p, false) end
-                local t = p.age > 0 and (p.age / p.duration) or 0
-                local s = math.sin(t * math.pi)
-                p:SetAlpha(look.strength * s * s)
-                local size = p.size * (0.7 + 0.3 * s)
-                p:SetSize(size, size)
-            end
+        if self.style and self.look then
+            Addon:DrawSparkle(self.main, self.shadow, self.style, self.look, self.elapsed, self)
         end
         if self.sinceCheck >= RECHECK then
             self.sinceCheck = 0
@@ -445,17 +478,24 @@ UpdateGlitter = function()
     local f = BuildGlitter()
     if not f then return end
     f:ClearAllPoints()
-    f:SetPoint("CENTER", plate, "BOTTOM", ANCHOR_X, ANCHOR_Y)
-    if f.look ~= look then
-        f.look = look
-        f.shimmer:SetVertexColor(look.r, look.g, look.b)
-        if f.shimmer.SetDesaturated then f.shimmer:SetDesaturated(look.grey) end
-        for _, p in ipairs(f.points) do
-            p:SetVertexColor(look.r, look.g, look.b)
-            if p.SetDesaturated then p:SetDesaturated(look.grey) end
-        end
+    f:SetPoint("CENTER", plate, "BOTTOM", 0, 0)
+    local style = Addon:GetSparkleStyle()
+    if f.look ~= look or f.style ~= style then
+        f.look, f.style = look, style
+        Addon:ApplySparkleColors(f.main, f.shadow, style, look)
+        Addon:DrawSparkle(f.main, f.shadow, style, look, f.elapsed, f)
     end
     f:Show()
+end
+
+-- Symbol auswaehlen (Optionen, /emberstone sparkle style ...)
+function Addon:SetSparkleStyle(id)
+    local style = STYLE_BY_ID[id] or SPARKLE_STYLES[tonumber(id) or 0]
+    if not style then return nil end
+    self:SetSetting("sparkleStyle", style.id)
+    UpdateGlitter()
+    if self.SparklePanel and self.SparklePanel.Sync then self.SparklePanel.Sync() end
+    return style
 end
 
 -- ------------------------------------------------------------
@@ -570,12 +610,22 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
 end)
 
 -- ------------------------------------------------------------
--- Befehl: /emberstone sparkle [debug|retry]
+-- Befehl: /emberstone sparkle [debug|retry|style <Name oder 1-5>]
 -- ------------------------------------------------------------
 local function OnOff(v) return v and L["SPARKLE_STATE_ON"] or L["SPARKLE_STATE_OFF"] end
 
 function Addon:HandleSparkleCommand(rest)
     local sub = self:Trim(rest):lower()
+    local word, arg = sub:match("^(%S*)%s*(.-)$")
+    if word == "style" then
+        local style = self:SetSparkleStyle(arg)
+        if style then
+            print(string.format(L["SPARKLE_STYLE_SET"], L["SPARKLE_STYLE_" .. style.id:upper()]))
+        else
+            print(L["SPARKLE_STYLE_USAGE"])
+        end
+        return
+    end
     if sub == "retry" then
         EmberstoneCommon.sparkleFallbackC = nil
         self:RefreshSparkle()
@@ -599,7 +649,8 @@ function Addon:HandleSparkleCommand(rest)
             tostring(CVarGet("SoftTargetIconGameObject")), tostring(InCombat())))
         print(string.format(L["SPARKLE_DEBUG_MODE"],
             self:GetSparkleMode() == "B" and L["SPARKLE_MODE_B"] or L["SPARKLE_MODE_C"],
-            tostring(CVarGet("SoftTargetNameplateSize"))))
+            tostring(CVarGet("SoftTargetNameplateSize")),
+            L["SPARKLE_STYLE_" .. self:GetSparkleStyle().id:upper()]))
         return
     end
     local conflict = self:GetSparkleConflict()

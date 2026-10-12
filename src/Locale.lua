@@ -415,8 +415,8 @@ local STRINGS = {
         deDE = "Objekte, die zu einer deiner aktiven Quests gehören, glitzern beim Näherkommen.",
     },
     OPT_SPARKLE_SOFT_HINT = {
-        enUS = "Herbs, ore veins and quest objects use the game's soft targeting (interaction targeting). It only ever selects one object at a time, the one in front of you. Emberstone shows golden sparkles there and hides Blizzard's own floating icon; if the game then shows no marker, the icon stays and the sparkles appear below it. Off during combat. Your previous settings are restored once all three are off.",
-        deDE = "Kräuter, Erzadern und Questobjekte nutzen das Soft Targeting des Spiels (Interaktions-Zielauswahl). Es wählt immer nur ein Objekt gleichzeitig aus, das vor dir. Emberstone zeigt dort goldene Funken und blendet Blizzards eigenes schwebendes Symbol aus; zeigt das Spiel dann keine Markierung, bleibt das Symbol und die Funken erscheinen darunter. Im Kampf aus. Deine vorherigen Einstellungen kommen zurück, sobald alle drei aus sind.",
+        enUS = "Herbs, ore veins and quest objects use the game's soft targeting (interaction targeting). It only ever selects one object at a time, the one in front of you. Emberstone shows a golden symbol there and hides Blizzard's own floating icon; if the game then shows no marker, the icon stays and the symbol appears below it. Off during combat. Your previous settings are restored once all three are off.",
+        deDE = "Kräuter, Erzadern und Questobjekte nutzen das Soft Targeting des Spiels (Interaktions-Zielauswahl). Es wählt immer nur ein Objekt gleichzeitig aus, das vor dir. Emberstone zeigt dort ein goldenes Symbol und blendet Blizzards eigenes schwebendes Symbol aus; zeigt das Spiel dann keine Markierung, bleibt es sichtbar und das goldene Symbol erscheint darunter. Im Kampf aus. Deine vorherigen Einstellungen kommen zurück, sobald alle drei aus sind.",
     },
     OPT_SPARKLE_RESTART_HINT = {
         enUS = "Note: depending on the game client, switching the quest item sparkle off (restoring the outline display) may only take full effect after restarting the game.",
@@ -447,14 +447,32 @@ local STRINGS = {
         deDE = "Emberstone-Glitzer-Einstellungen: Kräuter %s, Erzadern %s, Questobjekte %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, im Kampf %s.",
     },
     SPARKLE_DEBUG_MODE = {
-        enUS = "Emberstone sparkle display: %s, SoftTargetNameplateSize=%s.",
-        deDE = "Emberstone-Glitzer-Darstellung: %s, SoftTargetNameplateSize=%s.",
+        enUS = "Emberstone sparkle display: %s, SoftTargetNameplateSize=%s, symbol: %s.",
+        deDE = "Emberstone-Glitzer-Darstellung: %s, SoftTargetNameplateSize=%s, Symbol: %s.",
     },
-    SPARKLE_MODE_B = { enUS = "B (sparkles only, Blizzard icon hidden)", deDE = "B (nur Funken, Blizzards Symbol ausgeblendet)" },
-    SPARKLE_MODE_C = { enUS = "C (fallback: Blizzard icon stays, sparkles below)", deDE = "C (Rückfall: Blizzards Symbol bleibt, Funken darunter)" },
+    OPT_SPARKLE_STYLE_LABEL = {
+        enUS = "Symbol for herbs, ore veins and quest objects:",
+        deDE = "Symbol für Kräuter, Erzadern und Questobjekte:",
+    },
+    OPT_SPARKLE_STYLE_TOOLTIP = {
+        enUS = "Click to choose this symbol. All symbols are bright in range, faint out of range and grey without the profession.",
+        deDE = "Klicken, um dieses Symbol zu wählen. Alle Symbole sind hell in Reichweite, schwach außer Reichweite und grau ohne Beruf.",
+    },
+    SPARKLE_STYLE_STAR = { enUS = "Star", deDE = "Stern" },
+    SPARKLE_STYLE_BEAM = { enUS = "Light beam", deDE = "Lichtsäule" },
+    SPARKLE_STYLE_RING = { enUS = "Light ring", deDE = "Lichtring" },
+    SPARKLE_STYLE_GEM = { enUS = "Crystal", deDE = "Kristall" },
+    SPARKLE_STYLE_BURST = { enUS = "Sunburst", deDE = "Strahlenkranz" },
+    SPARKLE_STYLE_SET = { enUS = "Emberstone: sparkle symbol: %s.", deDE = "Emberstone: Glitzer-Symbol: %s." },
+    SPARKLE_STYLE_USAGE = {
+        enUS = "Usage: /emberstone sparkle style star|beam|ring|gem|burst (or 1-5)",
+        deDE = "Verwendung: /emberstone sparkle style star|beam|ring|gem|burst (oder 1-5)",
+    },
+    SPARKLE_MODE_B = { enUS = "B (golden symbol only, Blizzard icon hidden)", deDE = "B (nur goldenes Symbol, Blizzards Symbol ausgeblendet)" },
+    SPARKLE_MODE_C = { enUS = "C (fallback: Blizzard icon stays, golden symbol below)", deDE = "C (Rückfall: Blizzards Symbol bleibt, goldenes Symbol darunter)" },
     SPARKLE_FALLBACK_NOTICE = {
-        enUS = "Emberstone: Without Blizzard's icon the game shows no marker for the object, so the icon stays visible and the sparkles appear below it. Try again with /emberstone sparkle retry",
-        deDE = "Emberstone: Ohne Blizzards Symbol zeigt das Spiel keine Markierung für das Objekt an. Das Symbol bleibt deshalb sichtbar, die Funken erscheinen darunter. Erneut versuchen mit /emberstone sparkle retry",
+        enUS = "Emberstone: Without Blizzard's icon the game shows no marker for the object, so Blizzard's icon stays visible and the golden symbol appears below it. Try again with /emberstone sparkle retry",
+        deDE = "Emberstone: Ohne Blizzards Symbol zeigt das Spiel keine Markierung für das Objekt an. Blizzards Symbol bleibt deshalb sichtbar, das goldene Symbol erscheint darunter. Erneut versuchen mit /emberstone sparkle retry",
     },
     SPARKLE_RETRY_DONE = {
         enUS = "Emberstone: Trying again to hide Blizzard's icon.",

@@ -356,6 +356,58 @@ local function BuildSparklePanel()
     AddBox("sparkleOre", L["OPT_SPARKLE_ORE_LABEL"], L["OPT_SPARKLE_ORE_TOOLTIP"])
     AddBox("sparkleQuestObjects", L["OPT_SPARKLE_QUESTOBJ_LABEL"], L["OPT_SPARKLE_QUESTOBJ_TOOLTIP"])
 
+    -- Symbol-Auswahl: fuenf Knoepfe mit kleiner, bewegter Vorschau
+    local styleLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    styleLabel:SetPoint("TOPLEFT", 20, y - 8)
+    styleLabel:SetText(L["OPT_SPARKLE_STYLE_LABEL"])
+    y = y - 30
+
+    local styleButtons = {}
+    local previewLook = { r = 1.0, g = 0.80, b = 0.30, strength = 1.0, scale = 0.55, grey = false }
+    for i, style in ipairs(Addon.SparkleStyles or {}) do
+        local b = CreateFrame("Button", nil, panel)
+        b:SetSize(72, 72)
+        b:SetPoint("TOPLEFT", 20 + (i - 1) * 84, y)
+        local border = b:CreateTexture(nil, "BACKGROUND", nil, -1)
+        border:SetAllPoints()
+        if border.SetColorTexture then border:SetColorTexture(1, 0.8, 0.3, 0.9) end
+        local bg = b:CreateTexture(nil, "BACKGROUND")
+        bg:SetPoint("TOPLEFT", 2, -2)
+        bg:SetPoint("BOTTOMRIGHT", -2, 2)
+        -- Hintergrund in neblig-gruenem Grau, damit die Vorschau wie im Spiel wirkt
+        if bg.SetColorTexture then bg:SetColorTexture(0.32, 0.38, 0.30, 1) end
+        local shadow = b:CreateTexture(nil, "BORDER")
+        shadow:SetTexture(Addon.SparkleAssetPath("glow.tga"))
+        local main = b:CreateTexture(nil, "ARTWORK")
+        Addon:ApplySparkleColors(main, shadow, style, previewLook)
+        -- Vorschau mittig (nicht mit dem Versatz zur Pflanze)
+        local previewStyle = setmetatable({ y = style.point == "BOTTOM" and -32 or 0 }, { __index = style })
+        b.preview = { main = main, shadow = shadow, style = previewStyle }
+        Addon:DrawSparkle(main, shadow, previewStyle, previewLook, 0, b)
+        local name = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        name:SetPoint("TOP", b, "BOTTOM", 0, -3)
+        name:SetText(L["SPARKLE_STYLE_" .. style.id:upper()])
+        b:SetScript("OnClick", function() Addon:SetSparkleStyle(style.id) end)
+        b:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(L["OPT_SPARKLE_STYLE_TOOLTIP"], nil, nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        b.border, b.styleId = border, style.id
+        table.insert(styleButtons, b)
+    end
+    y = y - 96
+
+    -- Vorschau bewegt sich, solange die Seite offen ist
+    local previewTime = 0
+    panel:SetScript("OnUpdate", function(_, elapsed)
+        previewTime = previewTime + elapsed
+        for _, b in ipairs(styleButtons) do
+            Addon:DrawSparkle(b.preview.main, b.preview.shadow, b.preview.style, previewLook, previewTime, b)
+        end
+    end)
+
     local soft = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     soft:SetPoint("TOPLEFT", 20, y - 6)
     soft:SetWidth(440)
@@ -369,10 +421,15 @@ local function BuildSparklePanel()
             pcall(cb.SetChecked, cb, Addon:GetSetting(cb.settingKey) and true or false)
             if cb.SetEnabled then pcall(cb.SetEnabled, cb, not other) end
         end
+        local current = Addon:GetSparkleStyle().id
+        for _, b in ipairs(styleButtons) do
+            b.border:SetShown(b.styleId == current) -- goldener Rahmen = gewaehlt
+        end
     end
     Sync()
     panel:SetScript("OnShow", Sync)
     panel.Sync = Sync
+    panel.styleButtons = styleButtons
     return panel
 end
 

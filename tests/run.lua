@@ -544,16 +544,15 @@ for _, profile in ipairs({ "retail", "forever" }) do
         local g = soft(A, "Interface\\Cursor\\GatherHerbs")
         assert(g and g:IsShown(), "nicht sichtbar")
         eq(g.look.name, "bright", "hell")
-        eq(g.look.count, 5, "5 Funken")
-        eq(g.points[1]._desat, false, "nicht grau")
-        eq(g.points[1]._color[1], 1.0, "Gold")
+        eq(g.main._desat, false, "nicht grau")
+        eq(g.main._color[1], 1.0, "Gold")
         soft(A, "Interface\\Cursor\\UnableGatherHerbs")
         eq(g.look.name, "dim", "schwach")
-        assert(g.look.count < 5 and g.look.strength < 1, "schwach = weniger, blassere Funken")
+        assert(g.look.scale < 1 and g.look.strength < 1, "schwach = kleiner und blasser")
         M.profs = { 186 }
         soft(A, "Interface\\Cursor\\GatherHerbs")
         eq(g.look.name, "grey", "grau ohne Kräuterkunde")
-        eq(g.points[1]._desat, true, "entsättigt")
+        eq(g.main._desat, true, "entsättigt")
     end)
 
     test("Glitzern: Erz nur mit Erz-Schalter", function()
@@ -566,7 +565,7 @@ for _, profile in ipairs({ "retail", "forever" }) do
         g = soft(A, "Interface\\Cursor\\Mine")
         assert(g and g:IsShown(), "Erz glitzert nicht")
         eq(g.look.name, "bright")
-        eq(g.points[1]._color[2], 0.82, "Erz ebenfalls Gold")
+        eq(g.main._color[2], 0.80, "Erz ebenfalls Gold")
     end)
 
     test("Glitzern: Questobjekt über Quest-Zuordnung, im Kampf aus", function()
@@ -643,25 +642,102 @@ for _, profile in ipairs({ "retail", "forever" }) do
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleHerbs", true)
         local g = soft(A, "Interface\\Cursor\\GatherHerbs")
-        eq(g.points[1]._file, "Interface\\AddOns\\Emberstone\\Assets\\sparkle.tga")
-        eq(g.shimmer._file, "Interface\\AddOns\\Emberstone\\Assets\\glow.tga")
+        eq(g.main._file, "Interface\\AddOns\\Emberstone\\Assets\\sparkle_star.tga")
+        eq(g.shadow._file, "Interface\\AddOns\\Emberstone\\Assets\\glow.tga")
     end)
 
     -- -------- Variante B mit Rueckfall C --------
-    test("Glitzern B: Funken an der Unterkante der Plakette, höchstens 5, funkeln", function()
+    test("Glitzern: Standard ist ein großer goldener Stern unter der Plakette, der pulsiert", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleHerbs", true)
         M.profs = { 182 }
         local g = soft(A, "Interface\\Cursor\\GatherHerbs")
+        eq(A:GetSetting("sparkleStyle"), "star", "Voreinstellung")
         local pt = g._points[#g._points]
         eq(pt[1], "CENTER"); eq(pt[2], M.soft.plate, "an der Plakette"); eq(pt[3], "BOTTOM", "Unterkante")
-        eq(#g.points, 5, "Anzahl Funken")
-        local seen = 0
+        local mp = g.main._points[#g.main._points]
+        assert(mp[5] < 0, "tiefer als die Unterkante (näher an der Pflanze)")
+        local minW, maxW = 1e9, 0
         for _ = 1, 60 do
             g._scripts.OnUpdate(g, 0.05)
-            for _, p in ipairs(g.points) do if (p._alpha or 0) > 0.3 then seen = seen + 1 end end
+            minW = math.min(minW, g.main._w); maxW = math.max(maxW, g.main._w)
         end
-        assert(seen > 0, "Funken leuchten nie auf")
+        assert(minW >= 55, "groß: " .. minW)
+        assert(maxW - minW > 5, "pulsiert nicht")
+    end)
+
+    test("Glitzern: alle fünf Symbole - hell, schwach, grau und Bewegung", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        eq(#A.SparkleStyles, 5, "Anzahl Symbole")
+        local files = {}
+        for _, style in ipairs(A.SparkleStyles) do
+            A:SetSparkleStyle(style.id)
+            M.profs = { 182 }
+            local g = soft(A, "Interface\\Cursor\\GatherHerbs")
+            assert(g:IsShown(), style.id .. " nicht sichtbar")
+            assert(g.main._file:find(style.file, 1, true), style.id .. " falsche Grafik")
+            assert(not files[g.main._file], style.id .. " gleiche Grafik wie ein anderes Symbol")
+            files[g.main._file] = true
+            local alphas = {}
+            for _ = 1, 40 do
+                g._scripts.OnUpdate(g, 0.05)
+                alphas[#alphas + 1] = g.main._alpha
+            end
+            local brightAlpha = math.max(unpack(alphas))
+            local brightW = g.main._w
+            soft(A, "Interface\\Cursor\\UnableGatherHerbs")
+            g._scripts.OnUpdate(g, 0.05)
+            assert(g.main._alpha < brightAlpha, style.id .. ": schwach nicht blasser")
+            M.profs = {}
+            soft(A, "Interface\\Cursor\\GatherHerbs")
+            g._scripts.OnUpdate(g, 0.05)
+            eq(g.main._desat, true, style.id .. ": grau")
+            assert(brightW > 0, style.id .. ": keine Größe")
+        end
+    end)
+
+    test("Glitzern: Strahlenkranz dreht sich, Lichtring breitet sich aus", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        M.profs = { 182 }
+        A:SetSparkleStyle("burst")
+        local g = soft(A, "Interface\\Cursor\\GatherHerbs")
+        g._scripts.OnUpdate(g, 0.1); local r1 = g.main._rotation
+        g._scripts.OnUpdate(g, 0.5); local r2 = g.main._rotation
+        assert(r2 > r1, "dreht sich nicht")
+        A:SetSparkleStyle("ring")
+        soft(A, "Interface\\Cursor\\GatherHerbs")
+        local widths = {}
+        for _ = 1, 32 do g._scripts.OnUpdate(g, 0.05); widths[#widths + 1] = g.main._w end
+        assert(math.max(unpack(widths)) > math.min(unpack(widths)) * 1.5, "Ring breitet sich nicht aus")
+    end)
+
+    test("Glitzern: Symbol-Auswahl gespeichert, per Befehl und Optionen", function()
+        local A = boot(profile, locale)
+        SlashCmdList.EMBERSTONE("sparkle style 3")
+        eq(A:GetSetting("sparkleStyle"), "ring", "per Nummer")
+        SlashCmdList.EMBERSTONE("sparkle style GEM")
+        eq(A:GetSetting("sparkleStyle"), "gem", "per Name")
+        assert(has(M.printed, A.L["SPARKLE_STYLE_GEM"]), "Bestätigung fehlt")
+        SlashCmdList.EMBERSTONE("sparkle style kaputt")
+        eq(A:GetSetting("sparkleStyle"), "gem", "ungültig ändert nichts")
+        assert(has(M.printed, A.L["SPARKLE_STYLE_USAGE"]), "Hilfe fehlt")
+        local buttons = A.SparklePanel.styleButtons
+        eq(#buttons, 5, "fünf Knöpfe")
+        buttons[2]._scripts.OnClick(buttons[2])
+        eq(A:GetSetting("sparkleStyle"), "beam", "Klick")
+        for i, b in ipairs(buttons) do eq(b.border:IsShown(), i == 2, "Rahmen " .. i) end
+        A.SparklePanel._scripts.OnUpdate(A.SparklePanel, 0.1) -- Vorschau animiert ohne Fehler
+        EmberstoneCommon.sparkleStyle = "gibtsnicht"
+        eq(A:GetSparkleStyle().id, "star", "unbekannt -> Stern")
+    end)
+
+    test("Glitzern: Debug nennt das Symbol", function()
+        local A = boot(profile, locale)
+        A:SetSparkleStyle("burst")
+        SlashCmdList.EMBERSTONE("sparkle debug")
+        assert(has(M.printed, A.L["SPARKLE_STYLE_BURST"]), "Symbol fehlt")
     end)
 
     test("Glitzern B: Symbol-Größe 0, alter Wert gespeichert und beim Ausschalten zurück", function()

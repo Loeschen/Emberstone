@@ -88,6 +88,8 @@ function frameMT:GetTextureFilePath() return self._file end
 function frameMT:SetAlpha(a) self._alpha = a end
 function frameMT:SetVertexColor(r, g, b) self._color = { r, g, b } end
 function frameMT:SetDesaturated(d) self._desat = d end
+function frameMT:SetRotation(r) self._rotation = r end
+function frameMT:GetHeight() return self._h end
 function frameMT:CreateFontString() return NewFrame("FontString") end
 function frameMT:SetText(t) self._text = t end
 function frameMT:GetText() return self._text end
