@@ -19,6 +19,9 @@
 --   Objekt noch nicht benutzt werden kann (meist: ausser Reichweite), hell in
 --   Reichweite, grau, wenn dem Charakter der Beruf fehlt. Im Kampf aus.
 --   Einschraenkung: Soft Targeting waehlt immer nur EIN Objekt gleichzeitig.
+--   Kuerschnern (ab Werk AUS): haeutbare Leichen (Cursor "...Skin...") - hier
+--   ist das Ziel eine Einheit statt eines Spielobjekts; ihr 0-%-Lebensbalken
+--   wird waehrend des Leuchtens ausgeblendet (siehe HideCorpseBar).
 --   Aussehen (v1.13, Variante B): ein grosses, weich pulsierendes Leuchten
 --   (additiv) an der Unterkante der Plakette, fuenf Farben zur Auswahl
 --   (Standard: Gold), Blizzards schwebendes Symbol ausgeblendet.
@@ -59,7 +62,7 @@ local SOFT_CVARS = {
 -- aendert (diese setzt die Umriss-Werte mit).
 local PRESET_CVARS = { graphicsquality = true, raidgraphicsquality = true }
 
-local SKILL_HERBALISM, SKILL_MINING = 182, 186
+local SKILL_HERBALISM, SKILL_MINING, SKILL_SKINNING = 182, 186, 393
 
 local GROUPS = {
     loot = {
@@ -70,7 +73,7 @@ local GROUPS = {
         cvars = SOFT_CVARS,
         wanted = function()
             return (Addon:GetSetting("sparkleHerbs") or Addon:GetSetting("sparkleOre")
-                or Addon:GetSetting("sparkleQuestObjects")) and true or false
+                or Addon:GetSetting("sparkleQuestObjects") or Addon:GetSetting("sparkleSkinning")) and true or false
         end,
     },
 }
@@ -127,10 +130,24 @@ end
 -- Anwenden / Wiederherstellen
 -- ------------------------------------------------------------
 -- Rueckfall C: Blizzards Symbol bleibt sichtbar, weil das Spiel ohne Symbol
--- keine Plakette fuer das Objekt anlegt. Wird gespeichert, damit nicht bei
--- jedem Login erneut umgeschaltet wird (/emberstone sparkle retry setzt zurueck).
+-- keine Plakette fuer das Objekt anlegt. Gilt nur fuer diese Sitzung: beim
+-- naechsten Login und nach RETRY_AFTER Sekunden wird B erneut versucht.
+-- (Bis zur Testfassung vom 12.10.2026 wurde der Rueckfall dauerhaft
+-- gespeichert und schon durch ein einziges Objekt ohne Plakette ausgeloest -
+-- z.B. Deko-Objekte, die nie ein Symbol bekommen, oder ein Objekt ausserhalb
+-- des Bildes. Siehe Rueckfall-Waechter weiter unten.)
+local fallback = {
+    active = false,      -- C aktiv
+    confirmedB = false,  -- unter B wurde in dieser Sitzung schon eine Plakette gefunden
+    failures = {},       -- GUIDs, die unter B ohne Plakette blieben
+    failCount = 0,
+    notified = false,    -- Chat-Hinweis nur einmal pro Sitzung
+    retryAt = nil,
+    quietUntil = 0,      -- nach Login/Ladebildschirm nicht werten
+}
+
 local function IsFallbackC()
-    return EmberstoneCommon and EmberstoneCommon.sparkleFallbackC and true or false
+    return fallback.active
 end
 
 local applying = false   -- eigene SetCVar-Aufrufe nicht als Spieleraenderung werten
@@ -160,6 +177,7 @@ local function ApplyGroup(key)
 end
 
 local UpdateGlitter -- Vorwaertsdeklaration (Teil 2)
+local NoteBWorks   -- Vorwaertsdeklaration (Rueckfall-Waechter)
 
 -- Rueckgabe: "conflict", "combat" (nachgeholt) oder "ok"
 function Addon:RefreshSparkle()
@@ -291,6 +309,30 @@ local function HasProfession(skillLine)
     return false
 end
 
+-- Art eines Objekts anhand des Cursor-Symbols (z.B. auf Forever
+-- "Cursor Crosshair_GatherHerbs_64") bzw. der Quest-Zuordnung.
+-- Rueckgabe: kind ("herb"|"ore"|"quest"|"skin"|nil), unable, cursor
+local function KindOf(unit)
+    local cursor = CursorValue(unit)
+    local s = type(cursor) == "string" and cursor:lower() or ""
+    local unable = (s:find("unable", 1, true) or s:find("error", 1, true)) and true or false
+    local kind
+    if s:find("skin", 1, true) then
+        kind = "skin" -- haeutbare Leiche (Kuerschnerei)
+    elseif s:find("mine", 1, true) or s:find("mining", 1, true) then
+        kind = "ore"
+    elseif s:find("herb", 1, true) or s:find("gather", 1, true) then
+        kind = "herb"
+    elseif s:find("quest", 1, true) then
+        kind = "quest"
+    end
+    if not kind and C_QuestLog and C_QuestLog.UnitIsRelatedToActiveQuest then
+        local ok, related = pcall(C_QuestLog.UnitIsRelatedToActiveQuest, unit)
+        if ok and related == true then kind = "quest" end
+    end
+    return kind, unable, cursor
+end
+
 -- Liefert eine Tabelle { unit, isObject, kind = "herb"|"ore"|"quest"|nil,
 -- unable, noSkill, cursor }
 function Addon:ClassifySoftInteract()
@@ -299,31 +341,24 @@ function Addon:ClassifySoftInteract()
     info.unit = unit
     if not unit then return info end
     info.isObject = IsGameObjectUnit(unit)
-    if info.isObject == false then return info end -- NPCs/Spieler nicht
-
-    local cursor = CursorValue(unit)
-    info.cursor = cursor
-    local s = type(cursor) == "string" and cursor:lower() or ""
-    info.unable = (s:find("unable", 1, true) or s:find("error", 1, true)) and true or false
-    if s:find("mine", 1, true) or s:find("mining", 1, true) then
-        info.kind = "ore"
-    elseif s:find("herb", 1, true) or s:find("gather", 1, true) then
-        info.kind = "herb"
-    elseif s:find("quest", 1, true) then
-        info.kind = "quest"
+    info.kind, info.unable, info.cursor = KindOf(unit)
+    if info.isObject == false then
+        -- Einheiten (NPCs, Leichen): nur haeutbare Leichen. Normale
+        -- pluenderbare Leichen zeigen einen Pluender-Cursor und bleiben aus.
+        local okDead, dead = pcall(UnitIsDead or function() return false end, unit)
+        info.isCorpse = okDead and dead == true
+        if not (info.kind == "skin" and info.isCorpse) then info.kind = nil end
+    elseif info.kind == "skin" then
+        info.kind = nil -- Kuerschnern nur an Leichen
     end
-
-    if not info.kind and C_QuestLog and C_QuestLog.UnitIsRelatedToActiveQuest then
-        local ok, related = pcall(C_QuestLog.UnitIsRelatedToActiveQuest, unit)
-        if ok and related == true then info.kind = "quest" end
-    end
-
+    if info.kind == "skin" then info.noSkill = not HasProfession(SKILL_SKINNING) end
     if info.kind == "herb" then info.noSkill = not HasProfession(SKILL_HERBALISM) end
     if info.kind == "ore" then info.noSkill = not HasProfession(SKILL_MINING) end
     return info
 end
 
-local KIND_SETTING = { herb = "sparkleHerbs", ore = "sparkleOre", quest = "sparkleQuestObjects" }
+local KIND_SETTING = { herb = "sparkleHerbs", ore = "sparkleOre", quest = "sparkleQuestObjects",
+    skin = "sparkleSkinning" }
 
 -- "Hell, schwach, grau" - gilt fuer alle Farben. Die Farbe selbst kommt aus
 -- der gewaehlten Variante, "grau" ersetzt sie.
@@ -445,6 +480,35 @@ local function BuildGlitter()
     return f
 end
 
+-- Lebensbalken einer Leichen-Plakette ausblenden (sonst steht dort ein
+-- leerer 0-%-Balken). Blizzard entscheidet selbst, ob eine Plakette einen
+-- Balken zeigt (UnitNameplateShowsWidgetsOnly) - eine Einstellung dafuer
+-- gibt es nicht. Deshalb behutsam: nur die Deckkraft, nur an der Leiche mit
+-- unserem Leuchten, nur ausserhalb des Kampfes, und sofort zurueck, sobald
+-- das Leuchten wechselt, die Plakette verschwindet oder ein Kampf beginnt.
+local hiddenBar
+
+local function RestoreCorpseBar()
+    if hiddenBar then
+        pcall(hiddenBar.SetAlpha, hiddenBar, 1)
+        hiddenBar = nil
+    end
+end
+
+local function HideCorpseBar(plate)
+    local unitFrame = plate and plate.UnitFrame
+    local bar = type(unitFrame) == "table" and unitFrame.HealthBarsContainer or nil
+    if type(bar) ~= "table" or type(bar.SetAlpha) ~= "function" or bar == hiddenBar then return end
+    RestoreCorpseBar()
+    if InCombat() then return end
+    if bar.IsForbidden then
+        local okF, forbidden = pcall(bar.IsForbidden, bar)
+        if not okF or forbidden then return end
+    end
+    if pcall(bar.SetAlpha, bar, 0) then hiddenBar = bar end
+end
+Addon._sparkleHiddenBar = function() return hiddenBar end -- nur fuer Tests
+
 local function SoftPlate(unit)
     if not (unit and C_NamePlate and C_NamePlate.GetNamePlateForUnit) then return nil end
     local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
@@ -453,7 +517,10 @@ local function SoftPlate(unit)
 end
 
 UpdateGlitter = function()
-    local function hide() if glitter then glitter:Hide() end end
+    local function hide()
+        RestoreCorpseBar()
+        if glitter then glitter:Hide() end
+    end
     if not GROUPS.soft.wanted() or Addon:GetSparkleConflict() or InCombat() then return hide() end
 
     local info = Addon:ClassifySoftInteract()
@@ -461,6 +528,8 @@ UpdateGlitter = function()
     if not look then return hide() end
     local plate = SoftPlate(info.unit)
     if not plate then return hide() end
+    if info.isObject ~= false then NoteBWorks() end
+    if info.isCorpse then HideCorpseBar(plate) else RestoreCorpseBar() end
 
     local f = BuildGlitter()
     if not f then return end
@@ -492,7 +561,10 @@ end
 -- GameObject - auf Forever bestaetigt), aber nach PLATE_WAIT Sekunden gibt
 -- es immer noch keine Plakette dafuer, legt der Client ohne Symbol offenbar
 -- keine an. Dann den alten Symbol-Wert zuruecksetzen und bei C bleiben.
-local PLATE_WAIT = 2
+local PLATE_WAIT = 2         -- erste Pruefung, zweite nach 2 * PLATE_WAIT
+local FAILS_NEEDED = 3       -- so viele verschiedene Objekte ohne Plakette
+local RETRY_AFTER = 600      -- Sekunden bis zum neuen Versuch mit B
+local QUIET_AFTER_LOAD = 10  -- Sekunden nach Login/Ladebildschirm ohne Wertung
 
 local function SoftObjectGUID()
     if not UnitGUID then return nil end
@@ -510,14 +582,26 @@ function Addon:GetSparkleMode()
     return "B"
 end
 
+local function Now() return GetTime and GetTime() or 0 end
+
 local function WatchModeB()
-    return GROUPS.soft.wanted() and not IsFallbackC() and not Addon:GetSparkleConflict()
-        and not InCombat() and CVarGet("SoftTargetNameplateSize") == "0"
+    return GROUPS.soft.wanted() and not IsFallbackC() and not fallback.confirmedB
+        and not Addon:GetSparkleConflict() and not InCombat()
+        and CVarGet("SoftTargetNameplateSize") == "0"
 end
 
-function Addon:ActivateSparkleFallback()
+-- B neu versuchen (Login, nach RETRY_AFTER, /emberstone sparkle retry)
+function Addon:RetrySparkleModeB()
+    fallback.active = false
+    fallback.confirmedB = false
+    fallback.failures, fallback.failCount = {}, 0
+    fallback.retryAt = nil
+    return self:RefreshSparkle()
+end
+
+function Addon:ActivateSparkleFallback(lastKind, lastCursor)
     if IsFallbackC() then return end
-    EmberstoneCommon.sparkleFallbackC = true
+    fallback.active = true
     local saved = SavedRoot().soft
     if saved and saved.SoftTargetNameplateSize ~= nil then
         applying = true
@@ -525,21 +609,71 @@ function Addon:ActivateSparkleFallback()
         applying = false
         saved.SoftTargetNameplateSize = nil
     end
-    print(L["SPARKLE_FALLBACK_NOTICE"])
+    -- Fuer /emberstone sparkle debug festhalten, wann und warum
+    EmberstoneCommon.sparkleLastFallback = {
+        time = time and time() or 0,
+        objects = fallback.failCount,
+        wait = 2 * PLATE_WAIT,
+        kind = lastKind and tostring(lastKind) or "?",
+        cursor = lastCursor and tostring(lastCursor) or "?",
+    }
+    fallback.retryAt = (time and time() or 0) + RETRY_AFTER
+    if C_Timer and C_Timer.After then
+        C_Timer.After(RETRY_AFTER, function()
+            if fallback.active then Addon:RetrySparkleModeB() end
+        end)
+    end
+    if not fallback.notified then
+        fallback.notified = true
+        print(L["SPARKLE_FALLBACK_NOTICE"])
+    end
     UpdateGlitter()
 end
 
-local function CheckPlateLater()
-    if not WatchModeB() then return end
-    local guid = SoftObjectGUID()
-    if not guid then return end
-    local function check()
-        if not WatchModeB() then return end
-        if SoftObjectGUID() ~= guid then return end -- inzwischen anderes Ziel
-        if FindSoftUnit() then return end           -- Plakette da: B klappt
-        Addon:ActivateSparkleFallback()
+-- Unter B: Ist ein Objekt ausgewaehlt, fuer das das Spiel ein Symbol zeigen
+-- wuerde (Kraut, Erz, Questobjekt - am Cursor erkannt; Deko-Objekte ohne
+-- Symbol zaehlen nicht), aber nach 2 und nach 4 Sekunden gibt es keine
+-- Plakette, zaehlt das als Fehlversuch. Erst bei FAILS_NEEDED verschiedenen
+-- Objekten - und nur, wenn in dieser Sitzung unter B noch nie eine Plakette
+-- gefunden wurde - wird auf C umgeschaltet.
+NoteBWorks = function()
+    if not IsFallbackC() and CVarGet("SoftTargetNameplateSize") == "0" then
+        fallback.confirmedB = true
     end
-    if C_Timer and C_Timer.After then C_Timer.After(PLATE_WAIT, check) end
+end
+
+local function CheckPlateLater()
+    if not WatchModeB() or Now() < fallback.quietUntil then return end
+    local guid = SoftObjectGUID()
+    if not guid or fallback.failures[guid] then return end
+    if FindSoftUnit() then NoteBWorks() return end
+    local kind, _, cursor = KindOf(UNIT)
+    if not kind then return end -- Objekt ohne Symbol: sagt nichts ueber B
+    if not (C_Timer and C_Timer.After) then return end
+    local function still()
+        if not WatchModeB() or SoftObjectGUID() ~= guid then return false end
+        if FindSoftUnit() then NoteBWorks() return false end
+        return true
+    end
+    C_Timer.After(PLATE_WAIT, function()
+        if not still() then return end
+        C_Timer.After(PLATE_WAIT, function()
+            if not still() or fallback.failures[guid] then return end
+            fallback.failures[guid] = true
+            fallback.failCount = fallback.failCount + 1
+            if fallback.failCount >= FAILS_NEEDED then
+                Addon:ActivateSparkleFallback(kind, cursor)
+            end
+        end)
+    end)
+end
+
+function Addon:GetSparkleFallbackState()
+    return {
+        active = fallback.active, confirmedB = fallback.confirmedB,
+        failCount = fallback.failCount, needed = FAILS_NEEDED, retryAt = fallback.retryAt,
+        last = EmberstoneCommon and EmberstoneCommon.sparkleLastFallback,
+    }
 end
 
 -- Nur fuer Tests
@@ -551,7 +685,7 @@ Addon._sparkleGlitter = function() return glitter end
 local eventFrame = CreateFrame("Frame")
 for _, event in ipairs({
     "PLAYER_LOGIN", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "CVAR_UPDATE",
-    "GX_RESTARTED", "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED",
+    "GX_RESTARTED", "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "PLAYER_ENTERING_WORLD",
     "PLAYER_SOFT_INTERACT_CHANGED",
 }) do
     pcall(eventFrame.RegisterEvent, eventFrame, event)
@@ -559,11 +693,20 @@ end
 
 eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
     if not EmberstoneCommon then return end -- vor ADDON_LOADED
-    if event == "PLAYER_LOGIN" or event == "GX_RESTARTED" then
+    if event == "PLAYER_LOGIN" then
+        -- Rueckfall C wird nicht mehr dauerhaft gespeichert (Altlast der
+        -- Testfassungen entfernen); B bei jedem Login neu versuchen.
+        EmberstoneCommon.sparkleFallbackC = nil
+        fallback.quietUntil = Now() + QUIET_AFTER_LOAD
+        Addon:RetrySparkleModeB()
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        fallback.quietUntil = Now() + QUIET_AFTER_LOAD
+    elseif event == "GX_RESTARTED" then
         Addon:RefreshSparkle()
     elseif event == "PLAYER_REGEN_ENABLED" then
         if pending then Addon:RefreshSparkle() else UpdateGlitter() end
     elseif event == "PLAYER_REGEN_DISABLED" then
+        RestoreCorpseBar()
         if glitter then glitter:Hide() end
     elseif event == "CVAR_UPDATE" then
         if applying or type(arg1) ~= "string" then return end
@@ -590,6 +733,7 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
             plateTokens[arg1] = true
         elseif event == "NAME_PLATE_UNIT_REMOVED" and type(arg1) == "string" then
             plateTokens[arg1] = nil
+            RestoreCorpseBar() -- Plakette wird wiederverwendet: Balken sicher zurueck
         end
         UpdateGlitter()
         if event == "PLAYER_SOFT_INTERACT_CHANGED" then CheckPlateLater() end
@@ -614,8 +758,7 @@ function Addon:HandleSparkleCommand(rest)
         return
     end
     if sub == "retry" then
-        EmberstoneCommon.sparkleFallbackC = nil
-        self:RefreshSparkle()
+        self:RetrySparkleModeB()
         print(L["SPARKLE_RETRY_DONE"])
         return
     end
@@ -632,17 +775,33 @@ function Addon:HandleSparkleCommand(rest)
             tostring(SoftPlate(info.unit) ~= nil), plateCount))
         print(string.format(L["SPARKLE_DEBUG_SETTINGS"],
             OnOff(self:GetSetting("sparkleHerbs")), OnOff(self:GetSetting("sparkleOre")),
-            OnOff(self:GetSetting("sparkleQuestObjects")), tostring(CVarGet("softTargetInteract")),
+            OnOff(self:GetSetting("sparkleQuestObjects")), OnOff(self:GetSetting("sparkleSkinning")),
+            tostring(info.isCorpse), tostring(hiddenBar ~= nil), tostring(CVarGet("softTargetInteract")),
             tostring(CVarGet("SoftTargetIconGameObject")), tostring(InCombat())))
         print(string.format(L["SPARKLE_DEBUG_MODE"],
             self:GetSparkleMode() == "B" and L["SPARKLE_MODE_B"] or L["SPARKLE_MODE_C"],
             tostring(CVarGet("SoftTargetNameplateSize")),
             L["SPARKLE_STYLE_" .. self:GetSparkleStyle().id:upper()]))
+        local fb = self:GetSparkleFallbackState()
+        local dateFmt = L["DATE_FORMAT"] or "%Y-%m-%d %H:%M"
+        local last = L["SPARKLE_FB_NEVER"]
+        if type(fb.last) == "table" then
+            last = string.format(L["SPARKLE_FB_LAST"], date(dateFmt, fb.last.time or 0),
+                fb.last.objects or 0, fb.last.wait or 0, tostring(fb.last.kind), tostring(fb.last.cursor))
+        end
+        local nextTry = ""
+        if fb.active then
+            nextTry = string.format(L["SPARKLE_FB_NEXT"], fb.retryAt and date("%H:%M", fb.retryAt) or "?")
+        end
+        print(string.format(L["SPARKLE_DEBUG_FALLBACK"],
+            fb.confirmedB and L["SPARKLE_STATE_ON"] or L["SPARKLE_STATE_OFF"],
+            fb.failCount, fb.needed, last, nextTry))
         return
     end
     local conflict = self:GetSparkleConflict()
     print(string.format(L["SPARKLE_STATUS"],
         OnOff(self:GetSetting("sparkleQuestLoot")), OnOff(self:GetSetting("sparkleHerbs")),
-        OnOff(self:GetSetting("sparkleOre")), OnOff(self:GetSetting("sparkleQuestObjects"))))
+        OnOff(self:GetSetting("sparkleOre")), OnOff(self:GetSetting("sparkleQuestObjects")),
+        OnOff(self:GetSetting("sparkleSkinning"))))
     if conflict then print(string.format(L["SPARKLE_CONFLICT"], conflict)) end
 end

@@ -355,6 +355,7 @@ local function BuildSparklePanel()
     AddBox("sparkleHerbs", L["OPT_SPARKLE_HERBS_LABEL"], L["OPT_SPARKLE_HERBS_TOOLTIP"])
     AddBox("sparkleOre", L["OPT_SPARKLE_ORE_LABEL"], L["OPT_SPARKLE_ORE_TOOLTIP"])
     AddBox("sparkleQuestObjects", L["OPT_SPARKLE_QUESTOBJ_LABEL"], L["OPT_SPARKLE_QUESTOBJ_TOOLTIP"])
+    AddBox("sparkleSkinning", L["OPT_SPARKLE_SKIN_LABEL"], L["OPT_SPARKLE_SKIN_TOOLTIP"])
 
     -- Farb-Auswahl: fuenf Knoepfe mit kleiner, pulsierender Vorschau
     local styleLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")

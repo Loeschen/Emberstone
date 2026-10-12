@@ -414,9 +414,14 @@ local STRINGS = {
         enUS = "Objects that belong to one of your active quests sparkle when you get close.",
         deDE = "Objekte, die zu einer deiner aktiven Quests gehören, glitzern beim Näherkommen.",
     },
+    OPT_SPARKLE_SKIN_LABEL = { enUS = "Skinning", deDE = "Kürschnern" },
+    OPT_SPARKLE_SKIN_TOOLTIP = {
+        enUS = "Skinnable corpses glow when you get close (only skinnable ones, not corpses that can merely be looted - a corpse with loot glows after it has been looted). Faint while not yet usable (out of range or skill too low), bright in range, grey if your character lacks Skinning. The empty health bar of the corpse is hidden meanwhile. Off during combat.",
+        deDE = "Häutbare Leichen leuchten beim Näherkommen (nur häutbare, keine Leichen, die man nur plündern kann – eine Leiche mit Beute leuchtet, sobald sie geplündert ist). Schwach, solange sie noch nicht nutzbar sind (außer Reichweite oder Stufe zu niedrig), hell in Reichweite, grau, wenn deinem Charakter Kürschnerei fehlt. Der leere Lebensbalken der Leiche wird dabei ausgeblendet. Im Kampf aus.",
+    },
     OPT_SPARKLE_SOFT_HINT = {
-        enUS = "Herbs, ore veins and quest objects use the game's soft targeting (interaction targeting). It only ever selects one object at a time, the one in front of you. Emberstone shows a soft glow there and hides Blizzard's own floating icon; if the game then shows no marker, the icon stays and the glow appears below it. Off during combat. Your previous settings are restored once all three are off.",
-        deDE = "Kräuter, Erzadern und Questobjekte nutzen das Soft Targeting des Spiels (Interaktions-Zielauswahl). Es wählt immer nur ein Objekt gleichzeitig aus, das vor dir. Emberstone zeigt dort ein weiches Leuchten und blendet Blizzards eigenes schwebendes Symbol aus; zeigt das Spiel dann keine Markierung, bleibt es sichtbar und das Leuchten erscheint darunter. Im Kampf aus. Deine vorherigen Einstellungen kommen zurück, sobald alle drei aus sind.",
+        enUS = "Herbs, ore veins, quest objects and skinning use the game's soft targeting (interaction targeting). It only ever selects one object at a time, the one in front of you. Emberstone shows a soft glow there and hides Blizzard's own floating icon; if the game then shows no marker, the icon stays and the glow appears below it. Off during combat. Your previous settings are restored once all four are off.",
+        deDE = "Kräuter, Erzadern, Questobjekte und Kürschnern nutzen das Soft Targeting des Spiels (Interaktions-Zielauswahl). Es wählt immer nur ein Objekt gleichzeitig aus, das vor dir. Emberstone zeigt dort ein weiches Leuchten und blendet Blizzards eigenes schwebendes Symbol aus; zeigt das Spiel dann keine Markierung, bleibt es sichtbar und das Leuchten erscheint darunter. Im Kampf aus. Deine vorherigen Einstellungen kommen zurück, sobald alle vier aus sind.",
     },
     OPT_SPARKLE_RESTART_HINT = {
         enUS = "Note: depending on the game client, switching the quest item sparkle off (restoring the outline display) may only take full effect after restarting the game.",
@@ -435,24 +440,24 @@ local STRINGS = {
         deDE = "Emberstone: Im Kampf - die Glitzer-Einstellungen werden direkt nach dem Kampf übernommen.",
     },
     SPARKLE_STATUS = {
-        enUS = "Emberstone sparkles: quest items/loot %s, herbs %s, ore veins %s, quest objects %s.",
-        deDE = "Emberstone-Glitzern: Quest-Gegenstände/Beute %s, Kräuter %s, Erzadern %s, Questobjekte %s.",
+        enUS = "Emberstone sparkles: quest items/loot %s, herbs %s, ore veins %s, quest objects %s, skinning %s.",
+        deDE = "Emberstone-Glitzern: Quest-Gegenstände/Beute %s, Kräuter %s, Erzadern %s, Questobjekte %s, Kürschnern %s.",
     },
     SPARKLE_DEBUG = {
         enUS = "Emberstone sparkle test: plate unit %s, GUID type %s, game object %s, cursor %s, type %s, not usable %s, profession missing %s, plate found %s, visible plates %d.",
         deDE = "Emberstone-Glitzer-Test: Plaketten-Einheit %s, GUID-Art %s, Spielobjekt %s, Cursor %s, Art %s, nicht nutzbar %s, Beruf fehlt %s, Plakette gefunden %s, sichtbare Plaketten %d.",
     },
     SPARKLE_DEBUG_SETTINGS = {
-        enUS = "Emberstone sparkle settings: herbs %s, ore veins %s, quest objects %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, in combat %s.",
-        deDE = "Emberstone-Glitzer-Einstellungen: Kräuter %s, Erzadern %s, Questobjekte %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, im Kampf %s.",
+        enUS = "Emberstone sparkle settings: herbs %s, ore veins %s, quest objects %s, skinning %s, corpse %s, health bar hidden %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, in combat %s.",
+        deDE = "Emberstone-Glitzer-Einstellungen: Kräuter %s, Erzadern %s, Questobjekte %s, Kürschnern %s, Leiche %s, Lebensbalken ausgeblendet %s, softTargetInteract=%s, SoftTargetIconGameObject=%s, im Kampf %s.",
     },
     SPARKLE_DEBUG_MODE = {
         enUS = "Emberstone sparkle display: %s, SoftTargetNameplateSize=%s, glow colour: %s.",
         deDE = "Emberstone-Glitzer-Darstellung: %s, SoftTargetNameplateSize=%s, Leuchtfarbe: %s.",
     },
     OPT_SPARKLE_STYLE_LABEL = {
-        enUS = "Glow colour for herbs, ore veins and quest objects:",
-        deDE = "Leuchtfarbe für Kräuter, Erzadern und Questobjekte:",
+        enUS = "Glow colour for herbs, ore veins, quest objects and skinning:",
+        deDE = "Leuchtfarbe für Kräuter, Erzadern, Questobjekte und Kürschnern:",
     },
     OPT_SPARKLE_STYLE_TOOLTIP = {
         enUS = "Click to choose this colour. The glow is bright in range, faint out of range and grey without the profession.",
@@ -471,8 +476,21 @@ local STRINGS = {
     SPARKLE_MODE_B = { enUS = "B (glow only, Blizzard icon hidden)", deDE = "B (nur Leuchten, Blizzards Symbol ausgeblendet)" },
     SPARKLE_MODE_C = { enUS = "C (fallback: Blizzard icon stays, glow below)", deDE = "C (Rückfall: Blizzards Symbol bleibt, Leuchten darunter)" },
     SPARKLE_FALLBACK_NOTICE = {
-        enUS = "Emberstone: Without Blizzard's icon the game shows no marker for the object, so Blizzard's icon stays visible and the glow appears below it. Try again with /emberstone sparkle retry",
-        deDE = "Emberstone: Ohne Blizzards Symbol zeigt das Spiel keine Markierung für das Objekt an. Blizzards Symbol bleibt deshalb sichtbar, das Leuchten erscheint darunter. Erneut versuchen mit /emberstone sparkle retry",
+        enUS = "Emberstone: Without Blizzard's icon the game shows no marker for objects here, so Blizzard's icon stays visible and the glow appears below it. Emberstone tries again in 10 minutes or at the next login (right away: /emberstone sparkle retry).",
+        deDE = "Emberstone: Ohne Blizzards Symbol zeigt das Spiel hier keine Markierung für Objekte an. Blizzards Symbol bleibt deshalb sichtbar, das Leuchten erscheint darunter. Emberstone versucht es in 10 Minuten oder beim nächsten Login erneut (sofort: /emberstone sparkle retry).",
+    },
+    SPARKLE_DEBUG_FALLBACK = {
+        enUS = "Emberstone fallback check: B confirmed this session %s, objects without plate %d/%d, last fallback to C: %s.%s",
+        deDE = "Emberstone-Rückfall-Prüfung: B in dieser Sitzung bestätigt %s, Objekte ohne Plakette %d/%d, letzter Rückfall auf C: %s.%s",
+    },
+    SPARKLE_FB_NEVER = { enUS = "never", deDE = "nie" },
+    SPARKLE_FB_LAST = {
+        enUS = "%s, because %d objects had no plate after %d seconds (last: type %s, cursor %s)",
+        deDE = "%s, weil %d Objekte nach %d Sekunden keine Plakette hatten (zuletzt: Art %s, Cursor %s)",
+    },
+    SPARKLE_FB_NEXT = {
+        enUS = " Next try with B at %s or at the next login.",
+        deDE = " Nächster Versuch mit B um %s oder beim nächsten Login.",
     },
     SPARKLE_RETRY_DONE = {
         enUS = "Emberstone: Trying again to hide Blizzard's icon.",

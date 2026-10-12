@@ -743,106 +743,335 @@ for _, profile in ipairs({ "retail", "forever" }) do
         eq(M.cvars.SoftTargetNameplateSize, "24", "zurück")
     end)
 
+    -- Rueckfall-Waechter (ueberarbeitet nach Forever-Fund vom 12.10.2026: C wurde
+    -- durch ein einziges Objekt ausgeloest und blieb dauerhaft)
+    local HERB = "Cursor Crosshair_GatherHerbs_64" -- so auf Forever beobachtet
+    local function settle() M.advance(11) end      -- Ruhezeit nach Login vorbei
+    local function objectWithoutPlate(n, cursor)
+        M.soft = { guid = "GameObject-0-1-2-3-1617-00" .. tostring(n or 1) }
+        if cursor ~= false then M.soft.cursor = cursor or HERB end
+        M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "x")
+    end
+    local function threeWithoutPlate()
+        for n = 1, 3 do objectWithoutPlate(n); M.advance(4.5) end
+    end
+
     test("Glitzern B: Plakette kommt -> kein Rückfall", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleHerbs", true)
-        soft(A, "Interface\\Cursor\\GatherHerbs")
+        settle()
+        soft(A, HERB)
         M.advance(5)
         eq(A:GetSparkleMode(), "B")
         eq(M.cvars.SoftTargetNameplateSize, "0")
     end)
 
-    test("Glitzern B: Plakette kommt etwas später (1 s) -> kein Rückfall", function()
+    test("Glitzern B: Plakette kommt etwas später (1 s) -> kein Fehlversuch", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleHerbs", true)
-        M.soft = { guid = "GameObject-0-1-2-3-1617-0001" } -- schon ausgewaehlt, noch ohne Plakette
-        M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "x")
+        settle()
+        objectWithoutPlate(1)
         M.advance(1)
-        soft(A, "Interface\\Cursor\\GatherHerbs")
+        soft(A, HERB)
         M.advance(5)
+        eq(A:GetSparkleFallbackState().failCount, 0)
         eq(A:GetSparkleMode(), "B")
     end)
 
-    local function objectWithoutPlate()
-        M.soft = { guid = "GameObject-0-1-2-3-1617-0001" }
-        M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "x")
-    end
-
-    test("Glitzern Rückfall C: Objekt ausgewählt, aber keine Plakette -> alter Wert zurück, Hinweis", function()
+    test("Glitzern (Forever-Fund): EIN Objekt ohne Plakette löst C nicht mehr aus", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleHerbs", true)
-        objectWithoutPlate()
+        settle()
+        objectWithoutPlate(1)
+        M.advance(10)
+        eq(A:GetSparkleMode(), "B")
+        eq(M.cvars.SoftTargetNameplateSize, "0")
+        eq(A:GetSparkleFallbackState().failCount, 1, "als Fehlversuch gezählt")
+    end)
+
+    test("Glitzern: Deko-Objekte ohne Symbol (kein Cursor) zählen nicht", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        settle()
+        for n = 1, 5 do objectWithoutPlate(n, false); M.advance(5) end
+        eq(A:GetSparkleFallbackState().failCount, 0)
+        eq(A:GetSparkleMode(), "B")
+    end)
+
+    test("Glitzern: dasselbe Objekt mehrfach zählt nur einmal", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        settle()
+        for _ = 1, 4 do objectWithoutPlate(1); M.advance(5) end
+        eq(A:GetSparkleFallbackState().failCount, 1)
+        eq(A:GetSparkleMode(), "B")
+    end)
+
+    test("Glitzern: Ruhezeit nach Login - in den ersten 10 s wird nichts gewertet", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        objectWithoutPlate(1)
+        M.advance(5)
+        eq(A:GetSparkleFallbackState().failCount, 0, "nach Login")
+        settle()
+        M.FireEvent("PLAYER_ENTERING_WORLD") -- Ladebildschirm
+        objectWithoutPlate(2)
+        M.advance(5)
+        eq(A:GetSparkleFallbackState().failCount, 0, "nach Ladebildschirm")
+    end)
+
+    test("Glitzern Rückfall C: erst bei 3 verschiedenen Objekten ohne Plakette (je 4 s)", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        settle()
+        objectWithoutPlate(1); M.advance(4.5)
+        objectWithoutPlate(2); M.advance(4.5)
+        eq(A:GetSparkleMode(), "B", "nach 2 Objekten")
+        objectWithoutPlate(3); M.advance(3)
+        eq(A:GetSparkleMode(), "B", "3. Objekt erst nach 2 s geprüft")
         M.advance(1.5)
-        eq(A:GetSparkleMode(), "B", "noch nicht nach 1,5 s")
-        M.advance(1)
-        eq(A:GetSparkleMode(), "C", "nach 2 s")
-        eq(M.cvars.SoftTargetNameplateSize, "24", "alter Wert")
+        eq(A:GetSparkleMode(), "C", "nach 3 Objekten")
+        eq(M.cvars.SoftTargetNameplateSize, "24", "alter Wert zurück")
         assert(has(M.printed, A.L["SPARKLE_FALLBACK_NOTICE"]), "Hinweis fehlt")
-        cvarsAre({ softTargetInteract = "3", SoftTargetIconGameObject = "1" }, "Rest bleibt")
-        -- Jetzt mit Symbol: Plakette da, Funken erscheinen (wie C)
-        local g = soft(A, "Interface\\Cursor\\GatherHerbs")
-        assert(g and g:IsShown(), "Funken in C")
-        -- Ausschalten: nichts mehr zu tun, Wert bleibt der des Spielers
+        local last = EmberstoneCommon.sparkleLastFallback
+        eq(last.objects, 3, "Grund: Anzahl"); eq(last.wait, 4, "Grund: Wartezeit"); eq(last.kind, "herb", "Grund: Art")
+        eq(last.cursor, HERB, "Grund: Cursor")
+        -- Mit Symbol erscheint das Leuchten darunter
+        local g = soft(A, HERB)
+        assert(g and g:IsShown(), "Leuchten in C")
+        -- Ausschalten: alles zurück
         A:SetSparkleOption("sparkleHerbs", false)
-        eq(M.cvars.SoftTargetNameplateSize, "24")
         cvarsAre(SOFT_OLD, "alles zurück")
     end)
 
-    test("Glitzern Rückfall C: bleibt nach Neustart, CVAR_UPDATE ändert nichts, retry versucht B", function()
+    test("Glitzern: unter B einmal Plakette gefunden -> in dieser Sitzung kein Rückfall mehr", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleHerbs", true)
-        objectWithoutPlate()
-        M.advance(3)
+        settle()
+        soft(A, HERB)
+        M.advance(1)
+        eq(A:GetSparkleFallbackState().confirmedB, true, "B bestätigt")
+        threeWithoutPlate()
+        eq(A:GetSparkleMode(), "B")
+    end)
+
+    test("Glitzern: nach Rückfall nach 10 Minuten automatisch neuer Versuch mit B", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        settle()
+        threeWithoutPlate()
+        eq(A:GetSparkleMode(), "C")
+        M.soft = nil
+        M.advance(590)
+        eq(A:GetSparkleMode(), "C", "vor 10 Minuten")
+        M.advance(20)
+        eq(A:GetSparkleMode(), "B", "nach 10 Minuten")
+        eq(M.cvars.SoftTargetNameplateSize, "0")
+        eq(A:GetSparkleFallbackState().failCount, 0, "Zähler zurückgesetzt")
+        -- Erneuter Rückfall: Chat-Hinweis nur einmal pro Sitzung
+        threeWithoutPlate()
+        eq(A:GetSparkleMode(), "C")
+        local n = 0
+        for _, l in ipairs(M.printed) do if l == A.L["SPARKLE_FALLBACK_NOTICE"] then n = n + 1 end end
+        eq(n, 1, "Hinweis einmal")
+    end)
+
+    test("Glitzern: Rückfall gilt nur für die Sitzung - nach Neustart wieder B, Grund bleibt im Debug", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        settle()
+        threeWithoutPlate()
+        eq(A:GetSparkleMode(), "C")
         local saved = EmberstoneCommon
+        saved.sparkleFallbackC = true -- Altlast aus der Testfassung
         M.reset(profile, locale)
         M.cvars.SoftTargetNameplateSize = "24"
         local A2 = M.LoadAddon(ROOT)
         EmberstoneCommon = saved
         M.FireEvent("ADDON_LOADED", "Emberstone")
         M.FireEvent("PLAYER_LOGIN")
-        eq(M.cvars.SoftTargetNameplateSize, "24", "nach Neustart nicht wieder 0")
-        eq(A2:GetSparkleMode(), "C")
+        eq(A2:GetSparkleMode(), "B", "nach Neustart B")
+        eq(M.cvars.SoftTargetNameplateSize, "0", "Symbol wieder aus")
+        eq(EmberstoneCommon.sparkleFallbackC, nil, "Altlast entfernt")
+        SlashCmdList.EMBERSTONE("sparkle debug")
+        assert(has(M.printed, A2.L["SPARKLE_MODE_B"]), "Darstellung B")
+        local reason = A2.L["SPARKLE_FB_LAST"]:sub(1, 10):gsub("%%s", "")
+        local found = false
+        for _, l in ipairs(M.printed) do if l:find(HERB, 1, true) then found = true end end
+        assert(found, "Grund des letzten Rückfalls fehlt im Debug")
+    end)
+
+    test("Glitzern Rückfall C: CVAR_UPDATE ändert nichts, retry versucht B sofort", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleHerbs", true)
+        settle()
+        threeWithoutPlate()
         M.cvars.SoftTargetNameplateSize = "30"
         M.FireEvent("CVAR_UPDATE", "SoftTargetNameplateSize", "30")
         M.advance(1)
         eq(M.cvars.SoftTargetNameplateSize, "30", "Spielerwert bleibt")
         SlashCmdList.EMBERSTONE("sparkle retry")
-        eq(A2:GetSparkleMode(), "B")
+        eq(A:GetSparkleMode(), "B")
         eq(M.cvars.SoftTargetNameplateSize, "0")
-        A2:SetSparkleOption("sparkleHerbs", false)
+        A:SetSparkleOption("sparkleHerbs", false)
         eq(M.cvars.SoftTargetNameplateSize, "30", "zurück auf den Spielerwert")
     end)
 
     test("Glitzern Rückfall C: nicht bei Zielwechsel, nicht im Kampf, nicht wenn alles aus", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleHerbs", true)
-        objectWithoutPlate()
-        M.advance(1)
-        M.soft = { guid = "GameObject-0-1-2-3-1617-0002" } -- anderes Objekt
-        M.advance(1.5)
+        settle()
+        for n = 1, 3 do objectWithoutPlate(n); M.advance(3); objectWithoutPlate(n + 10); M.advance(1) end
         eq(A:GetSparkleMode(), "B", "Zielwechsel")
-        M.soft = nil
-        M.advance(5)
-        objectWithoutPlate()
+        M.soft = nil; M.advance(10)
         M.inCombat = true
-        M.advance(3)
+        threeWithoutPlate()
         eq(A:GetSparkleMode(), "B", "Kampf")
         M.inCombat = false
         A:SetSparkleOption("sparkleHerbs", false)
-        objectWithoutPlate()
-        M.advance(3)
+        threeWithoutPlate()
         eq(A:GetSparkleMode(), "B", "alles aus")
     end)
 
-    test("Glitzern: Debug zeigt die Darstellung B bzw. C", function()
+    test("Glitzern: Debug zeigt B bzw. C mit Zeitpunkt und Grund", function()
         local A = boot(profile, locale)
         A:SetSparkleOption("sparkleHerbs", true)
         SlashCmdList.EMBERSTONE("sparkle debug")
         assert(has(M.printed, A.L["SPARKLE_MODE_B"]), "B fehlt")
-        objectWithoutPlate()
-        M.advance(3)
+        assert(has(M.printed, A.L["SPARKLE_FB_NEVER"]), "\"nie\" fehlt")
+        settle()
+        threeWithoutPlate()
         SlashCmdList.EMBERSTONE("sparkle debug")
         assert(has(M.printed, A.L["SPARKLE_MODE_C"]), "C fehlt")
+        assert(has(M.printed, HERB), "Cursor im Grund fehlt")
+        assert(has(M.printed, os.date("%H:%M", os.time() + 600):sub(1, 2)), "nächster Versuch fehlt")
+    end)
+
+    -- -------- Kuerschnern (Leichen sind Einheiten, keine Spielobjekte) --------
+    local SKIN = "Cursor Crosshair_Skin_64"          -- Annahme nach dem Muster von GatherHerbs
+    local function corpse(A, cursor, extra)
+        local g = soft(A, cursor, { guid = "Creature-0-1-2-3-1553-0001", dead = true })
+        for k, v in pairs(extra or {}) do M.soft[k] = v end
+        if rawget(M.soft.plate, "UnitFrame") == nil then
+            rawset(M.soft.plate, "UnitFrame", { HealthBarsContainer = M.NewFrame("Frame") })
+        end
+        M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "x")
+        return A._sparkleGlitter(), rawget(M.soft.plate, "UnitFrame").HealthBarsContainer
+    end
+
+    test("Kürschnern: ab Werk aus, häutbare Leiche leuchtet nur mit Schalter", function()
+        local A = boot(profile, locale)
+        eq(A:GetSetting("sparkleSkinning"), false, "ab Werk aus")
+        A:SetSparkleOption("sparkleHerbs", true) -- Soft Targeting an, Kuerschnern aber aus
+        M.profs = { 393 }
+        local g = corpse(A, SKIN)
+        assert(not g or not g:IsShown(), "leuchtet ohne Schalter")
+        A:SetSparkleOption("sparkleSkinning", true)
+        g = corpse(A, SKIN)
+        assert(g and g:IsShown(), "häutbare Leiche leuchtet nicht")
+        eq(g.look.name, "bright")
+        eq(g.main._color[1], A:GetSparkleStyle().color[1], "Farbe nach Spielerwahl")
+    end)
+
+    test("Kürschnern: Soft Targeting auch nur mit Kürschnern-Schalter an", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
+        cvarsAre(SOFT, "Soft an")
+        A:SetSparkleOption("sparkleSkinning", false)
+        cvarsAre(SOFT_OLD, "alles zurück")
+    end)
+
+    test("Kürschnern: normale plünderbare Leiche und lebende NPCs leuchten nicht", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
+        A:SetSparkleOption("sparkleQuestObjects", true)
+        local g = corpse(A, "Cursor Crosshair_LootAll_64")
+        assert(not g or not g:IsShown(), "plünderbare Leiche leuchtet")
+        g = corpse(A, SKIN, { dead = false })
+        assert(not g or not g:IsShown(), "lebender NPC mit Skin-Cursor leuchtet")
+        g = corpse(A, "Cursor Crosshair_Quest_64", { quest = true })
+        assert(not g or not g:IsShown(), "Quest-Leiche als Questobjekt")
+    end)
+
+    test("Kürschnern: hell, schwach (außer Reichweite/Stufe zu niedrig), grau ohne Kürschnerei", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
+        M.profs = { 393 }
+        local g = corpse(A, SKIN)
+        eq(g.look.name, "bright", "hell")
+        corpse(A, "Cursor Crosshair_UnableSkin_64")
+        eq(g.look.name, "dim", "schwach")
+        M.profs = { 182, 186 }
+        corpse(A, SKIN)
+        eq(g.look.name, "grey", "grau ohne Kürschnerei")
+    end)
+
+    test("Kürschnern: 0-%-Lebensbalken der Leiche ausgeblendet und sicher zurückgesetzt", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
+        M.profs = { 393 }
+        local g, bar = corpse(A, SKIN)
+        eq(bar._alpha, 0, "Balken ausgeblendet")
+        -- Kampf beginnt: Leuchten aus, Balken zurück
+        M.inCombat = true
+        M.FireEvent("PLAYER_REGEN_DISABLED")
+        eq(bar._alpha, 1, "Balken im Kampf zurück")
+        eq(g:IsShown(), false, "Leuchten im Kampf aus")
+        M.inCombat = false
+        M.FireEvent("PLAYER_REGEN_ENABLED")
+        eq(bar._alpha, 0, "nach Kampf wieder ausgeblendet")
+        -- Plakette verschwindet (Leiche weg, Plakette wird wiederverwendet): Balken zurück
+        M.soft = nil
+        M.FireEvent("NAME_PLATE_UNIT_REMOVED", "nameplate1")
+        eq(bar._alpha, 1, "Plakette entfernt")
+        -- Kraut statt Leiche: kein Balken angefasst
+        A:SetSparkleOption("sparkleHerbs", true)
+        local _, bar2 = corpse(A, SKIN)
+        soft(A, "Cursor Crosshair_GatherHerbs_64")
+        eq(bar2._alpha, 1, "nach Wechsel zum Kraut zurück")
+        eq(A._sparkleHiddenBar(), nil)
+    end)
+
+    test("Kürschnern: verbotene Plakette wird nicht angefasst", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
+        M.profs = { 393 }
+        local bar = M.NewFrame("Frame")
+        bar.IsForbidden = function() return true end
+        local g = corpse(A, SKIN, { plate = (function()
+            local p = M.NewFrame("Frame"); p.GetUnit = function() return "nameplate1" end
+            p.UnitFrame = { HealthBarsContainer = bar }; return p end)() })
+        eq(bar._alpha, nil, "nicht angefasst")
+    end)
+
+    test("Kürschnern: Leichen lösen keinen Rückfall auf C aus", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
+        M.advance(11)
+        for n = 1, 4 do
+            M.soft = { guid = "Creature-0-1-2-3-1553-000" .. n, cursor = SKIN, dead = true }
+            M.FireEvent("PLAYER_SOFT_INTERACT_CHANGED", "", "x")
+            M.advance(5)
+        end
+        eq(A:GetSparkleMode(), "B")
+    end)
+
+    test("Kürschnern: Debug und Status nennen Kürschnern, Optionen haben den Schalter", function()
+        local A = boot(profile, locale)
+        A:SetSparkleOption("sparkleSkinning", true)
+        M.profs = { 393 }
+        corpse(A, SKIN)
+        SlashCmdList.EMBERSTONE("sparkle debug")
+        local found = false
+        for _, l in ipairs(M.printed) do
+            if l:lower():find(A.L["OPT_SPARKLE_SKIN_LABEL"]:lower(), 1, true) then found = true end
+        end
+        assert(found, "Kürschnern fehlt im Debug")
+        assert(has(M.printed, "skin"), "Art skin fehlt")
+        SlashCmdList.EMBERSTONE("sparkle")
+        local status = string.format(A.L["SPARKLE_STATUS"], A.L["SPARKLE_STATE_ON"], A.L["SPARKLE_STATE_OFF"],
+            A.L["SPARKLE_STATE_OFF"], A.L["SPARKLE_STATE_OFF"], A.L["SPARKLE_STATE_ON"])
+        assert(has(M.printed, status), "Status ohne Kürschnern")
     end)
 
     test("Glitzern: /emberstone sparkle und sparkle debug ohne Fehler", function()

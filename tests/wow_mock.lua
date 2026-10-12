@@ -191,7 +191,9 @@ function M.install()
     end
     _G.UnitIsGameObject = function(u) return isSoftToken(u) and M.soft.guid:find("^GameObject") ~= nil end
     _G.SetUnitCursorTexture = function(tex, unit)
-        if isSoftToken(unit) and M.soft.cursor then tex._file = M.soft.cursor; return true end
+        if (isSoftToken(unit) or (unit == "softinteract" and M.soft)) and M.soft and M.soft.cursor then
+            tex._file = M.soft.cursor; return true
+        end
         return false
     end
     _G.C_NamePlate = {
@@ -210,7 +212,7 @@ function M.install()
         if M.soft and (u == M.soft.token or (u == "softinteract" and not M.soft.noGuid)) then return M.soft.guid end
     end
     _G.UnitIsAFK = function() return false end
-    _G.UnitIsDead = function() return false end
+    _G.UnitIsDead = function(u) return M.soft ~= nil and u == M.soft.token and M.soft.dead == true end
     _G.UnitClassification = function() return "normal" end
     _G.UnitFactionGroup = function() return "Alliance" end
     _G.IsInGuild = function() return true end

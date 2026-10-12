@@ -57,6 +57,7 @@ Addon.Defaults = {
     sparkleHerbs                  = false, -- Kraeuter (Soft Targeting)
     sparkleOre                    = false, -- Erzadern (Soft Targeting)
     sparkleQuestObjects           = false, -- Questobjekte (Soft Targeting)
+    sparkleSkinning               = false, -- haeutbare Leichen (Soft Targeting)
     sparkleStyle                  = "gold", -- Leuchtfarbe: gold, green, arcane, white, violet
 
     -- Gildenweite Levelup-Benachrichtigungen - urspruenglich das eigenstaendige Addon "GrindDing"
